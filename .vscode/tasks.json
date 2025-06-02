@@ -1,0 +1,41 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "build"
+            ],
+            "presentation": {
+                "reveal": "always"
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "run",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "run",
+                "--configuration",
+                "${input:configuration}"
+            ],
+            "presentation": {
+                "reveal": "always"
+            }
+        }
+    ],
+    "inputs": [
+        {
+            "type": "pickString",
+            "options": [ "Debug", "Release" ],
+            "id": "configuration",
+            "description": "Configuration"
+        }
+    ]
+}
