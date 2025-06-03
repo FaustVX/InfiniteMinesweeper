@@ -8,4 +8,8 @@
     <LangVersion>preview</LangVersion>
   </PropertyGroup>
 
+  <ItemGroup>
+    <PackageReference Include="ZLinq" Version="1.4.10" />
+  </ItemGroup>
+
 </Project>
