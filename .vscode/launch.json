@@ -8,7 +8,7 @@
             "name": "C#: InfiniteMinesweeper Debug",
             "type": "dotnet",
             "request": "launch",
-            "projectPath": "${workspaceFolder}/InfiniteMinesweeper.csproj",
+            "projectPath": "${workspaceFolder}/InfiniteMinesweeper.App/InfiniteMinesweeper.App.csproj",
             "preLaunchTask": "build"
         },
         {
