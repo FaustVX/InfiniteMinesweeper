@@ -23,7 +23,9 @@
             "args": [
                 "run",
                 "--configuration",
-                "${input:configuration}"
+                "${input:configuration}",
+                "--project",
+                "${workspaceFolder}/InfiniteMinesweeper.App",
             ],
             "presentation": {
                 "reveal": "always"
@@ -35,7 +37,8 @@
             "type": "pickString",
             "options": [ "Debug", "Release" ],
             "id": "configuration",
-            "description": "Configuration"
+            "description": "Configuration",
+            "default": "Release",
         }
     ]
 }
