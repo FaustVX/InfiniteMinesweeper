@@ -18,7 +18,7 @@ var cluesColors = FrozenDictionary.Create<int, ConsoleColor>(null,
     new(7, ConsoleColor.Yellow),
     new(8, ConsoleColor.Magenta));
 
-var game = new Game(AnsiConsole.Ask<int>("Game seed :"));
+var game = new Game(AnsiConsole.Ask<int?>("Game seed :", null));
 Console.CursorVisible = false;
 Console.CancelKeyPress += (s, e) =>
 {
@@ -33,7 +33,8 @@ while (true)
     Pos viewport = new(Console.WindowWidth, Console.WindowHeight - (offsets.up + offsets.down));
     Pos center = viewport / 2;
     Console.Clear();
-    Console.WriteLine(game.GetCell(cursor, ChunkState.NotGenerated));
+    Console.Write(game.GetCell(cursor, ChunkState.NotGenerated));
+    Console.WriteAtEnd($"Seed: {game.Seed}", 1);
     Console.SetCursorPosition(0, offsets.up);
 
     for (int y = offsets.up; y < viewport.Y; y++)
@@ -108,22 +109,17 @@ file static class Ext
 
     extension(Console)
     {
-        public static bool TryGetKey(out ConsoleKeyInfo key)
-        {
-            if (Console.KeyAvailable)
-            {
-                key = Console.ReadKey();
-                return true;
-            }
-            key = default;
-            return false;
-        }
-
         public static void Write(int c, ConsoleColor foreground)
         {
             (var fore, Console.ForegroundColor) = (Console.ForegroundColor, foreground);
             Console.Write(c);
             Console.ForegroundColor = fore;
+        }
+
+        public static void WriteAtEnd(string text, int rightPadding = 0)
+        {
+            Console.CursorLeft = Console.WindowWidth - text.Length - rightPadding;
+            Console.Write(text);
         }
     }
 }
