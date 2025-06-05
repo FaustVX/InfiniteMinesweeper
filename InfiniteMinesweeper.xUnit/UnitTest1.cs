@@ -1,4 +1,7 @@
-﻿namespace InfiniteMinesweeper.xUnit;
+﻿using System.Runtime.CompilerServices;
+using ZLinq;
+
+namespace InfiniteMinesweeper.xUnit;
 
 public class UnitTest1
 {
@@ -50,5 +53,55 @@ public class UnitTest1
             new Pos(2, 0), new Pos(2, 1), new Pos(2, 2),
         ];
         Assert.Equal(expectedNeighbors.OrderBy(p => p.X).ThenBy(p => p.Y), neighbors.OrderBy(p => p.X).ThenBy(p => p.Y));
+    }
+
+    [Fact]
+    public void Game_GetChunk()
+    {
+        for (int i = 0; i < 10; i++)
+        {
+            // Arrange
+            var game = new Game();
+            var pos = new Pos(0, 0);
+
+            // Act
+            var chunk = (ChunkWithMines)game.GetChunk(pos, ChunkState.MineGenerated);
+
+            // Assert
+            Assert.Equal(game.MinesPerChunk, GetCells(chunk).AsValueEnumerable<Cell>().Count(static c => c.IsMine));
+        }
+
+        [UnsafeAccessor(UnsafeAccessorKind.Field, Name = "_cells")]
+        extern static ref Cell[,] GetCells(ChunkWithMines chunk);
+    }
+
+    [Fact]
+    public void Game_GetCell()
+    {
+        // Arrange
+        var game = new Game(0);
+        var pos = new Pos(0, 0);
+
+        // Act
+        ref var cell = ref game.GetCell(pos, ChunkState.MineGenerated);
+
+        // Assert
+        Assert.Equal(0, cell.MinesAround);
+    }
+
+    [Theory]
+    [InlineData(0, 34)]
+    [InlineData(1, 1)]
+    public void Game_Explore(int seed, int expected)
+    {
+        // Arrange
+        var game = new Game(seed);
+        var pos = new Pos(0, 0);
+
+        // Act
+        var exploredCells = game.Explore(pos);
+
+        // Assert
+        Assert.Equal(expected, exploredCells);
     }
 }
