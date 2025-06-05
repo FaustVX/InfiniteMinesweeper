@@ -11,7 +11,10 @@ public readonly record struct Pos(int X, int Y)
     public static Pos operator /(Pos a, int scalar)
     => new(a.X / scalar, a.Y / scalar);
     public static Pos operator %(Pos a, int scalar)
-    => new(a.X % scalar, a.Y % scalar);
+    => new(
+        ((a.X % scalar) + scalar) % scalar,
+        ((a.Y % scalar) + scalar) % scalar
+    );
 
     public Pos East
     => new(X + 1, Y);
@@ -22,13 +25,13 @@ public readonly record struct Pos(int X, int Y)
     public Pos South
     => new(X, Y + 1);
     public Pos NorthEast
-    => North + East;
+    => North.East;
     public Pos NorthWest
-    => North + West;
+    => North.West;
     public Pos SouthEast
-    => South + East;
+    => South.East;
     public Pos SouthWest
-    => South + West;
+    => South.West;
 
     public Pos ToPosInChunk(out Pos chunkPos)
     {
