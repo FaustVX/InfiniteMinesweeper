@@ -2,7 +2,7 @@ namespace InfiniteMinesweeper;
 
 public class Game(int? seed = null)
 {
-    public int MaxMinesPerChunk => 10;
+    public int MinesPerChunk => 10;
     public readonly int Seed = seed ?? Random.Shared.Next();
     private readonly Dictionary<Pos, Chunk> _chunks = [];
 

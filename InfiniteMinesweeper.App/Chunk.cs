@@ -30,10 +30,13 @@ public sealed class ChunkWithMines(Pos pos, Game game) : Chunk(pos)
             for (int j = 0; j < Size; j++)
                 cells[i, j] = new Cell(0, new(i, j), pos, false, false, IsUnexplored: true);
         var rng = new Random(game.Seed + pos.GetHashCode());
-        for (int i = 0; i < game.MaxMinesPerChunk; i++)
+        for (int i = 0; i < game.MinesPerChunk; i++)
         {
+Loop:
             var mine = rng.NextPos();
             ref var cell = ref cells[mine.X, mine.Y];
+            if (cell.IsMine)
+                goto Loop;
             cell = cell with { IsMine = true };
         }
         return cells;
