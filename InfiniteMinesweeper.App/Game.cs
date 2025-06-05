@@ -27,21 +27,23 @@ public class Game(int? seed = null)
 
     public void ToggleFlag(Pos cellPos)
     {
-        ref var cell = ref GetCell(cellPos, ChunkState.FullyGenerated);
+        ref var cell = ref GetCell(cellPos, ChunkState.MineGenerated);
         if (!cell.IsUnexplored)
             return;
         cell = cell with { IsFlagged = !cell.IsFlagged };
     }
 
-    public void Explore(Pos cellPos)
+    public int Explore(Pos cellPos)
     {
         ref var cell = ref GetCell(cellPos, ChunkState.FullyGenerated);
         if (!cell.IsUnexplored || cell.IsFlagged)
-            return;
+            return 0;
         cell = cell with { IsUnexplored = false };
+        var count = 1;
         if (cell.MinesAround == 0 && !cell.IsMine)
             foreach (var neighbor in GetNeighbors(cellPos))
-                Explore(neighbor);
+                count += Explore(neighbor);
+        return count;
     }
 
     private static readonly Pos[] NeighborCells =
