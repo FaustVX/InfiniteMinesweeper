@@ -50,16 +50,38 @@ public class Game(int? seed = null)
         }
 
         ref var cell = ref GetCell(cellPos, ChunkState.FullyGenerated);
-        if (!cell.IsUnexplored || cell.IsFlagged)
-            return 0;
-        cell = cell with { IsUnexplored = false };
-if (cell.IsMine)
+        if (cell.IsUnexplored)
+            return ExploreUnexplored(cellPos);
+        if (cell.MinesAround > 0)
+            return ExploreClue(cellPos);
+        return 0;
+
+        int ExploreUnexplored(Pos cellPos)
+        {
+            ref var cell = ref GetCell(cellPos, ChunkState.FullyGenerated);
+            if (cell.IsFlagged || !cell.IsUnexplored)
+                return 0;
+            cell = cell with { IsUnexplored = false };
+            if (cell.IsMine)
                 throw new ExplodeException();
-        var count = 1;
-        if (cell.MinesAround == 0 && !cell.IsMine)
-            foreach (var neighbor in GetNeighbors(cellPos))
-                count += Explore(neighbor);
-        return count;
+            var count = 1;
+            if (cell.MinesAround == 0 && !cell.IsMine)
+                foreach (var neighbor in GetNeighbors(cellPos))
+                    count += ExploreUnexplored(neighbor);
+            return count;
+        }
+
+        int ExploreClue(Pos cellPos)
+        {
+            ref var cell = ref GetCell(cellPos, ChunkState.FullyGenerated);
+            if (cell.IsFlagged)
+                return 0;
+            var count = 0;
+            if (cell.MinesAround == GetNeighbors(cellPos).Count(p => GetCell(p, ChunkState.MineGenerated) is { IsFlagged: true }) && !cell.IsMine)
+                foreach (var neighbor in GetNeighbors(cellPos))
+                    count += ExploreUnexplored(neighbor);
+            return count;
+        }
     }
 
     private static readonly Pos[] NeighborCells =
