@@ -10,7 +10,12 @@ public class Chunk(Pos pos)
     public virtual ChunkState State => ChunkState.NotGenerated;
     public virtual ref Cell this[Pos pos]
     {
-        get => ref _defaultCell;
+        get
+        {
+            ref var c = ref _defaultCell;
+            c = c with { PosInChunk = pos };
+            return ref _defaultCell;
+        }
     }
 }
 
@@ -19,9 +24,7 @@ public sealed class ChunkWithMines(Pos pos, Game game) : Chunk(pos)
     private readonly Cell[,] _cells = GenerateCells(game, pos);
     public override ChunkState State => ChunkState.MineGenerated;
     public override ref Cell this[Pos pos]
-    {
-        get => ref _cells[pos.X, pos.Y];
-    }
+    => ref _cells[pos.X, pos.Y];
 
     static Cell[,] GenerateCells(Game game, Pos pos)
     {
@@ -48,9 +51,7 @@ public sealed class ChunkGenerated(Pos pos, Game game) : Chunk(pos)
     private readonly Cell[,] _cells = GenerateCells(game, pos);
     public override ChunkState State => ChunkState.FullyGenerated;
     public override ref Cell this[Pos pos]
-    {
-        get => ref _cells[pos.X, pos.Y];
-    }
+    => ref _cells[pos.X, pos.Y];
 
     static Cell[,] GenerateCells(Game game, Pos pos)
     {
