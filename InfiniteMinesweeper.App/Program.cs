@@ -20,15 +20,20 @@ var cluesColors = FrozenDictionary.Create<int, ConsoleColor>(null,
 
 var game = new Game(AnsiConsole.Ask<int?>("Game seed :", null));
 Console.CursorVisible = false;
-Console.CancelKeyPress += (s, e) =>
-{
-    Console.ResetColor();
-    Console.CursorVisible = true;
-};
+Console.CancelKeyPress += (s, e) => Exit();
 
 var cursor = new Pos((Chunk.Size - 1) / 2, (Chunk.Size - 1) / 2);
 (int up, int down) offsets = (1, 0);
 while (true)
+{
+    Draw();
+
+    if (!Update(game, ref cursor))
+        break;
+}
+Exit();
+
+void Draw()
 {
     Pos viewport = new(Console.WindowWidth, Console.WindowHeight - (offsets.up + offsets.down));
     Pos center = viewport / 2;
@@ -75,7 +80,10 @@ while (true)
         }
         Console.WriteLine();
     }
+}
 
+bool Update(Game game, ref Pos cursor)
+{
     switch (Console.ReadKey(intercept: true).Key)
     {
         case ConsoleKey.UpArrow:
@@ -91,13 +99,28 @@ while (true)
             cursor = cursor.East;
             break;
         case ConsoleKey.Spacebar:
-            game.Explore(cursor);
+            try
+            {
+                game.Explore(cursor);
+            }
+            catch (ExplodeException)
+            {
+                Draw();
+                return false;
+            }
             break;
         case ConsoleKey.Enter:
             game.ToggleFlag(cursor);
             break;
     }
+    return true;
 }
+
+static void Exit()
+{
+    Console.ResetColor();
+    Console.CursorVisible = true;
+};
 
 file static class Ext
 {

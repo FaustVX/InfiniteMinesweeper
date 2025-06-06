@@ -53,6 +53,8 @@ public class Game(int? seed = null)
         if (!cell.IsUnexplored || cell.IsFlagged)
             return 0;
         cell = cell with { IsUnexplored = false };
+if (cell.IsMine)
+                throw new ExplodeException();
         var count = 1;
         if (cell.MinesAround == 0 && !cell.IsMine)
             foreach (var neighbor in GetNeighbors(cellPos))
@@ -73,3 +75,6 @@ public class Game(int? seed = null)
             yield return pos + cellPos;
     }
 }
+
+[Serializable]
+public class ExplodeException() : Exception;
