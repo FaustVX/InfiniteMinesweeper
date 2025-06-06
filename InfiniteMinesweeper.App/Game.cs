@@ -33,8 +33,22 @@ public class Game(int? seed = null)
         cell = cell with { IsFlagged = !cell.IsFlagged };
     }
 
+    private bool _waitFor1stMove = true;
+
     public int Explore(Pos cellPos)
     {
+        if (_waitFor1stMove)
+        {
+            _waitFor1stMove = false;
+            ref var c = ref GetCell(cellPos, ChunkState.MineGenerated);
+            c = c with { IsMine = false };
+            foreach (var pos in GetNeighbors(cellPos))
+            {
+                c = ref GetCell(pos, ChunkState.MineGenerated);
+                c = c with { IsMine = false };
+            }
+        }
+
         ref var cell = ref GetCell(cellPos, ChunkState.FullyGenerated);
         if (!cell.IsUnexplored || cell.IsFlagged)
             return 0;

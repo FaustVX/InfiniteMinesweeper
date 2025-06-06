@@ -91,7 +91,8 @@ public class UnitTest1
 
     [Theory]
     [InlineData(0, 34)]
-    [InlineData(1, 1)]
+    [InlineData(1, 86)]
+    [InlineData(2, 92)]
     public void Game_Explore(int seed, int expected)
     {
         // Arrange
