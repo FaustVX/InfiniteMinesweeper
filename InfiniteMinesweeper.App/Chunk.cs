@@ -24,7 +24,9 @@ public sealed class ChunkWithMines(Pos pos, Game game) : Chunk(pos, game)
 {
     private readonly Cell[,] _cells = GenerateCells(game, pos);
     public override ChunkState State => ChunkState.MineGenerated;
-    public override int RemainingMines => _cells.AsValueEnumerable<Cell>().Count(static c => c.IsMine) - _cells.AsValueEnumerable<Cell>().Count(static c => c.IsFlagged);
+    public override int RemainingMines => _cells.AsValueEnumerable<Cell>()
+        .Sum(static c => (c.IsMine ? 1 : 0) - (c.IsFlagged ? 1 : 0));
+
     public override ref Cell this[Pos pos]
     => ref _cells[pos.X, pos.Y];
 
@@ -52,7 +54,9 @@ public sealed class ChunkGenerated(Pos pos, Game game) : Chunk(pos, game)
 {
     private readonly Cell[,] _cells = GenerateCells(game, pos);
     public override ChunkState State => ChunkState.FullyGenerated;
-    public override int RemainingMines => _cells.AsValueEnumerable<Cell>().Count(static c => c.IsMine) - _cells.AsValueEnumerable<Cell>().Count(static c => c.IsFlagged);
+    public override int RemainingMines => _cells.AsValueEnumerable<Cell>()
+        .Sum(static c => (c.IsMine ? 1 : 0) - (c.IsFlagged ? 1 : 0));
+
     public override ref Cell this[Pos pos]
     => ref _cells[pos.X, pos.Y];
 
