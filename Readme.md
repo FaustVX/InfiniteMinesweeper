@@ -22,10 +22,10 @@ This game runs only in the terminal.
 ```bash
 dotnet run --project InfiniteMinesweeper.App
 ```
-
+![game preview](image.png)
 ## Contributing
 
-  
+
 You can [open a new issue](https://github.com/FaustVX/InfiniteMinesweeper/issues/new), [submit a pull request](https://github.com/FaustVX/InfiniteMinesweeper/compare), or [start a discussion](https://github.com/FaustVX/InfiniteMinesweeper/discussions) to contribute.
 
 ## License
