@@ -20,7 +20,23 @@ var cluesColors = FrozenDictionary.Create<int, ConsoleColor>(null,
 
 var game = new Game(AnsiConsole.Ask<int?>("Game seed :", null));
 Console.CursorVisible = false;
-var timer = DateTime.Now;
+var cts = new CancellationTokenSource();
+var timer = Task.Run(async () =>
+{
+    var start = DateTime.Now;
+    var timer = new PeriodicTimer(TimeSpan.FromSeconds(.5));
+    do
+        lock (cts)
+        {
+            Console.CursorVisible = false;
+            var (left, top) = Console.GetCursorPosition();
+            Console.SetCursorPosition(0, 0);
+            Console.WriteAtEnd((DateTime.Now - start) is { TotalMinutes: var mins, Seconds: var sec } ? $"{mins:00}:{sec:00}" : "00:00");
+            Console.SetCursorPosition(left, top);
+            Console.CursorVisible = true;
+        }
+    while (await timer.WaitForNextTickAsync(cts.Token));
+});
 Console.CancelKeyPress += (s, e) => Exit();
 
 var cursor = new Pos(Chunk.Size - 1, Chunk.Size - 1) / 2;
@@ -37,51 +53,53 @@ Exit();
 
 void Draw()
 {
-    Pos viewport = new(Console.WindowWidth, Console.WindowHeight - (offsets.up + offsets.down));
-    Pos center = viewport / 2;
-    Console.SetCursorPosition(0, 0);
-    Console.Write($"Cell: {game.GetCell(cursor, ChunkState.NotGenerated).ToColoredString(cluesColors)}   ");
-    Console.WriteCentered($"   Chunk: {game.GetChunk(cursor.ToChunkPos(out _), ChunkState.NotGenerated).ToColoredString()}   ");
-    Console.WriteAtEnd((DateTime.Now - timer) is { TotalMinutes: var mins, Seconds: var sec } ? $"{mins:00}:{sec:00}" : "00:00");
-    Console.SetCursorPosition(0, offsets.up);
-    Console.CursorVisible = false;
-
-    for (int y = offsets.up; y < viewport.Y; y++)
+    lock (cts)
     {
-        for (int x = 0; x < viewport.X; x++)
+        Pos viewport = new(Console.WindowWidth, Console.WindowHeight - (offsets.up + offsets.down));
+        Pos center = viewport / 2;
+        Console.SetCursorPosition(0, 0);
+        Console.Write($"Cell: {game.GetCell(cursor, ChunkState.NotGenerated).ToColoredString(cluesColors)}   ");
+        Console.WriteCentered($"   Chunk: {game.GetChunk(cursor.ToChunkPos(out _), ChunkState.NotGenerated).ToColoredString()}   ");
+        Console.SetCursorPosition(0, offsets.up);
+        Console.CursorVisible = false;
+
+        for (int y = offsets.up; y < viewport.Y; y++)
         {
-            var cellPos = new Pos(x, y) - center + cursor;
-            ref var cell = ref game.GetCell(cellPos, ChunkState.NotGenerated);
-            if (cell.IsUnexplored)
+            for (int x = 0; x < viewport.X; x++)
             {
-                (var back, Console.BackgroundColor) = (Console.BackgroundColor, Console.BackgroundColor = bgColors[(cellPos.ToChunkPos(out var posInChunk).IsEven, posInChunk.IsEven)]);
-                if (cell.IsFlagged)
-                    Console.Write('?');
-                else
-                    Console.Write(' ');
-                Console.BackgroundColor = back;
-            }
-            else
-            {
-                switch (cell)
+                var cellPos = new Pos(x, y) - center + cursor;
+                ref var cell = ref game.GetCell(cellPos, ChunkState.NotGenerated);
+                if (cell.IsUnexplored)
                 {
-                    case { IsMine: true }:
-                        Console.Write('*');
-                        break;
-                    case { MinesAround: > 0 and var mines }:
-                        Console.Write(mines, cluesColors[mines]);
-                        break;
-                    default:
+                    (var back, Console.BackgroundColor) = (Console.BackgroundColor, bgColors[(cellPos.ToChunkPos(out var posInChunk).IsEven, posInChunk.IsEven)]);
+                    if (cell.IsFlagged)
+                        Console.Write('?');
+                    else
                         Console.Write(' ');
-                        break;
+                    Console.BackgroundColor = back;
+                }
+                else
+                {
+                    switch (cell)
+                    {
+                        case { IsMine: true }:
+                            Console.Write('*');
+                            break;
+                        case { MinesAround: > 0 and var mines }:
+                            Console.Write(mines, cluesColors[mines]);
+                            break;
+                        default:
+                            Console.Write(' ');
+                            break;
+                    }
                 }
             }
+            Console.WriteLine();
         }
-        Console.WriteLine();
+        Console.WriteCentered($"Seed: {Console.WithItalic(game.Seed)}");
+        Console.SetCursorPosition(center.X, center.Y);
+        Console.CursorVisible = true;
     }
-    Console.WriteCentered($"Seed: {Console.WithItalic(game.Seed)}");
-    Console.SetCursorPosition(center.X, center.Y);
-    Console.CursorVisible = true;
 }
 
 bool Update(Game game, ref Pos cursor)
@@ -118,8 +136,9 @@ bool Update(Game game, ref Pos cursor)
     return true;
 }
 
-static void Exit()
+void Exit()
 {
+    cts.Cancel();
     Console.ResetColor();
     Console.CursorVisible = true;
 };
