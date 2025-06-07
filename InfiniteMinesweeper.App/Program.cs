@@ -20,6 +20,7 @@ var cluesColors = FrozenDictionary.Create<int, ConsoleColor>(null,
 
 var game = new Game(AnsiConsole.Ask<int?>("Game seed :", null));
 Console.CursorVisible = false;
+var timer = DateTime.Now;
 Console.CancelKeyPress += (s, e) => Exit();
 
 var cursor = new Pos((Chunk.Size - 1) / 2, (Chunk.Size - 1) / 2);
@@ -38,8 +39,9 @@ void Draw()
     Pos viewport = new(Console.WindowWidth, Console.WindowHeight - (offsets.up + offsets.down));
     Pos center = viewport / 2;
     Console.Clear();
-    Console.Write(game.GetCell(cursor, ChunkState.NotGenerated));
-    Console.WriteAtEnd($"Seed: {game.Seed}", 1);
+    Console.Write(game.GetCell(cursor, ChunkState.NotGenerated).ToColoredString(cluesColors));
+    Console.WriteCentered((DateTime.Now - timer) is { TotalMinutes: var mins, Seconds: var sec } ? $"{mins:00}:{sec:00}" : "00:00");
+    Console.WriteAtEnd($"Seed: {Console.WithItalic(game.Seed)}", 1);
     Console.SetCursorPosition(0, offsets.up);
 
     for (int y = offsets.up; y < viewport.Y; y++)
@@ -128,6 +130,9 @@ file static class Ext
     {
         public bool IsEven
         => (pos.X + pos.Y) % 2 == 0;
+
+        public string ToColoredString()
+        => $$"""{ X: {{Console.WithForeground(ConsoleColor.Red, pos.X)}}, Y: {{Console.WithForeground(ConsoleColor.Green, pos.Y)}} }""";
     }
 
     extension(Console)
@@ -144,5 +149,66 @@ file static class Ext
             Console.CursorLeft = Console.WindowWidth - text.Length - rightPadding;
             Console.Write(text);
         }
+
+        public static void WriteCentered(string text)
+        {
+            Console.CursorLeft = (Console.WindowWidth - text.Length) / 2;
+            Console.Write(text);
+        }
+
+        public static string WithForeground(ConsoleColor color, char c)
+        => $"{color.ToEscapedForegroundColor}{c}{((ConsoleColor)(-1)).ToEscapedForegroundColor}";
+
+        public static string WithForeground(ConsoleColor color, int i)
+        => $"{color.ToEscapedForegroundColor}{i}{((ConsoleColor)(-1)).ToEscapedForegroundColor}";
+
+        public static string WithUnderline(int i)
+        => $"\e[4m{i}\e[24m";
+
+        public static string WithItalic(int i)
+        => $"\e[3m{i}\e[23m";
+    }
+
+    extension(ref readonly Cell c)
+    {
+        public string ToColoredString(IReadOnlyDictionary<int, ConsoleColor> cluesColor)
+        {
+            return c switch
+            {
+                { IsUnexplored: true } => $$"""{ Pos: {{c.PosInChunk.ToCellPos(c.ChunkPos).ToColoredString()}}, Flag: {{(c.IsFlagged ? Console.WithForeground(ConsoleColor.Blue, 'Y') : "N")}} }""",
+                { IsMine: true } => $$"""{ Pos: {{c.PosInChunk.ToCellPos(c.ChunkPos).ToColoredString()}}, Mine: {{Console.WithForeground(ConsoleColor.Red, 'Y')}} }""",
+                { MinesAround: > 0 and var mines } => $$"""{ Pos: {{c.PosInChunk.ToCellPos(c.ChunkPos).ToColoredString()}}, Mines: {{Console.WithForeground(cluesColor[mines], mines)}} }""",
+                {  } => $$"""{ Pos: {{c.PosInChunk.ToCellPos(c.ChunkPos).ToColoredString()}}, Mines: 0 }""",
+            };
+        }
+    }
+
+    extension(ConsoleColor color)
+    {
+        public string ToEscapedForegroundColor => $"\e[{color.FGColor}m";
+
+        public int FGColor => color switch
+        {
+            ConsoleColor.Black => 30,
+            ConsoleColor.DarkBlue => 34,
+            ConsoleColor.DarkGreen => 32,
+            ConsoleColor.DarkCyan => 36,
+            ConsoleColor.DarkRed => 31,
+            ConsoleColor.DarkMagenta => 35,
+            ConsoleColor.DarkYellow => 33,
+            ConsoleColor.Gray => 37,
+            ConsoleColor.DarkGray => 90,
+            ConsoleColor.Blue => 94,
+            ConsoleColor.Green => 92,
+            ConsoleColor.Cyan => 96,
+            ConsoleColor.Red => 91,
+            ConsoleColor.Magenta => 95,
+            ConsoleColor.Yellow => 93,
+            ConsoleColor.White => 97,
+            (ConsoleColor)(-1) => 39,
+            _ => throw new ArgumentOutOfRangeException(nameof(color), color, null),
+        };
+
+        public int BGColor => color.FGColor + 10;
     }
 }

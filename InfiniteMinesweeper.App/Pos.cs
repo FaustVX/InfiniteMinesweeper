@@ -49,7 +49,5 @@ public readonly record struct Pos(int X, int Y)
     => chunkPos * Chunk.Size + this;
 
     public override string ToString()
-    {
-        return $$"""{ X: {{X}}, Y: {{Y}} }""";
-    }
+    => $$"""{ X: {{X}}, Y: {{Y}} }""";
 }

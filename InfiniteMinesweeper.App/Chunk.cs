@@ -101,18 +101,7 @@ public enum ChunkState
     FullyGenerated,
 }
 
-public readonly record struct Cell(int MinesAround, Pos PosInChunk, Pos ChunkPos, bool IsMine, bool IsFlagged, bool IsUnexplored)
-{
-    public override string ToString()
-    {
-        return this switch
-        {
-            { IsUnexplored: true } => $$"""{ Pos: {{PosInChunk.ToCellPos(ChunkPos)}}, Flag: {{(IsFlagged ? 'Y' : 'N')}} }""",
-            { IsMine: true } => $$"""{ Pos: {{PosInChunk.ToCellPos(ChunkPos)}}, Mine: Y }""",
-            { MinesAround: var mines } => $$"""{ Pos: {{PosInChunk.ToCellPos(ChunkPos)}}, Mines: {{mines}} }""",
-        };
-    }
-}
+public readonly record struct Cell(int MinesAround, Pos PosInChunk, Pos ChunkPos, bool IsMine, bool IsFlagged, bool IsUnexplored);
 
 file static class Ext
 {
