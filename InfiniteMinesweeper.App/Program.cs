@@ -24,7 +24,7 @@ var timer = DateTime.Now;
 Console.CancelKeyPress += (s, e) => Exit();
 
 var cursor = new Pos(Chunk.Size - 1, Chunk.Size - 1) / 2;
-(int up, int down) offsets = (1, 0);
+(int up, int down) offsets = (1, 1);
 while (true)
 {
     Draw();
@@ -40,8 +40,8 @@ void Draw()
     Pos center = viewport / 2;
     Console.Clear();
     Console.Write(game.GetCell(cursor, ChunkState.NotGenerated).ToColoredString(cluesColors));
-    Console.WriteCentered((DateTime.Now - timer) is { TotalMinutes: var mins, Seconds: var sec } ? $"{mins:00}:{sec:00}" : "00:00");
-    Console.WriteAtEnd($"Seed: {Console.WithItalic(game.Seed)}", 1);
+    Console.WriteAtEnd((DateTime.Now - timer) is { TotalMinutes: var mins, Seconds: var sec } ? $"{mins:00}:{sec:00}" : "00:00");
+    Console.WriteCentered($"{game.GetChunk(cursor.ToChunkPos(out _), ChunkState.NotGenerated).ToColoredString()}");
     Console.SetCursorPosition(0, offsets.up);
 
     for (int y = offsets.up; y < viewport.Y; y++)
@@ -82,6 +82,7 @@ void Draw()
         }
         Console.WriteLine();
     }
+    Console.WriteCentered($"Seed: {Console.WithItalic(game.Seed)}");
 }
 
 bool Update(Game game, ref Pos cursor)
@@ -181,6 +182,12 @@ file static class Ext
                 {  } => $$"""Pos: {{c.PosInChunk.ToCellPos(c.ChunkPos).ToColoredString()}}, Mines: 0""",
             };
         }
+    }
+
+    extension(Chunk chunk)
+    {
+        public string ToColoredString()
+        => $$"""Pos: {{chunk.Pos.ToColoredString()}}, Mines: {{chunk.RemainingMines}}""";
     }
 
     extension(ConsoleColor color)
