@@ -15,7 +15,7 @@ public class Game(int? seed = null)
 
         return _chunks[pos] = desiredState switch
         {
-            ChunkState.NotGenerated => new Chunk(pos),
+            ChunkState.NotGenerated => new Chunk(pos, this),
             ChunkState.MineGenerated => new ChunkWithMines(pos, this),
             ChunkState.FullyGenerated => new ChunkGenerated(pos, this),
             _ => throw new ArgumentOutOfRangeException(nameof(desiredState))

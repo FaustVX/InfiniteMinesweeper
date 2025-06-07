@@ -23,7 +23,7 @@ Console.CursorVisible = false;
 var timer = DateTime.Now;
 Console.CancelKeyPress += (s, e) => Exit();
 
-var cursor = new Pos((Chunk.Size - 1) / 2, (Chunk.Size - 1) / 2);
+var cursor = new Pos(Chunk.Size - 1, Chunk.Size - 1) / 2;
 (int up, int down) offsets = (1, 0);
 while (true)
 {
@@ -175,10 +175,10 @@ file static class Ext
         {
             return c switch
             {
-                { IsUnexplored: true } => $$"""{ Pos: {{c.PosInChunk.ToCellPos(c.ChunkPos).ToColoredString()}}, Flag: {{(c.IsFlagged ? Console.WithForeground(ConsoleColor.Blue, 'Y') : "N")}} }""",
-                { IsMine: true } => $$"""{ Pos: {{c.PosInChunk.ToCellPos(c.ChunkPos).ToColoredString()}}, Mine: {{Console.WithForeground(ConsoleColor.Red, 'Y')}} }""",
-                { MinesAround: > 0 and var mines } => $$"""{ Pos: {{c.PosInChunk.ToCellPos(c.ChunkPos).ToColoredString()}}, Mines: {{Console.WithForeground(cluesColor[mines], mines)}} }""",
-                {  } => $$"""{ Pos: {{c.PosInChunk.ToCellPos(c.ChunkPos).ToColoredString()}}, Mines: 0 }""",
+                { IsUnexplored: true } => $$"""Pos: {{c.PosInChunk.ToCellPos(c.ChunkPos).ToColoredString()}}, Flag: {{(c.IsFlagged ? Console.WithForeground(ConsoleColor.Blue, 'Y') : "N")}}""",
+                { IsMine: true } => $$"""Pos: {{c.PosInChunk.ToCellPos(c.ChunkPos).ToColoredString()}}, Mine: {{Console.WithForeground(ConsoleColor.Red, 'Y')}}""",
+                { MinesAround: > 0 and var mines } => $$"""Pos: {{c.PosInChunk.ToCellPos(c.ChunkPos).ToColoredString()}}, Mines: {{Console.WithForeground(cluesColor[mines], mines)}}""",
+                {  } => $$"""Pos: {{c.PosInChunk.ToCellPos(c.ChunkPos).ToColoredString()}}, Mines: 0""",
             };
         }
     }

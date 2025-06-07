@@ -2,11 +2,12 @@ using ZLinq;
 
 namespace InfiniteMinesweeper;
 
-public class Chunk(Pos pos)
+public class Chunk(Pos pos, Game game)
 {
     public const int Size = 8;
     private Cell _defaultCell = default(Cell) with { IsUnexplored = true, ChunkPos = pos };
     public Pos Pos { get; } = pos;
+    public virtual int RemainingMines => game.MinesPerChunk;
     public virtual ChunkState State => ChunkState.NotGenerated;
     public virtual ref Cell this[Pos pos]
     {
@@ -19,10 +20,11 @@ public class Chunk(Pos pos)
     }
 }
 
-public sealed class ChunkWithMines(Pos pos, Game game) : Chunk(pos)
+public sealed class ChunkWithMines(Pos pos, Game game) : Chunk(pos, game)
 {
     private readonly Cell[,] _cells = GenerateCells(game, pos);
     public override ChunkState State => ChunkState.MineGenerated;
+    public override int RemainingMines => _cells.AsValueEnumerable<Cell>().Count(static c => c.IsMine) - _cells.AsValueEnumerable<Cell>().Count(static c => c.IsFlagged);
     public override ref Cell this[Pos pos]
     => ref _cells[pos.X, pos.Y];
 
@@ -46,10 +48,11 @@ Loop:
     }
 }
 
-public sealed class ChunkGenerated(Pos pos, Game game) : Chunk(pos)
+public sealed class ChunkGenerated(Pos pos, Game game) : Chunk(pos, game)
 {
     private readonly Cell[,] _cells = GenerateCells(game, pos);
     public override ChunkState State => ChunkState.FullyGenerated;
+    public override int RemainingMines => _cells.AsValueEnumerable<Cell>().Count(static c => c.IsMine) - _cells.AsValueEnumerable<Cell>().Count(static c => c.IsFlagged);
     public override ref Cell this[Pos pos]
     => ref _cells[pos.X, pos.Y];
 
