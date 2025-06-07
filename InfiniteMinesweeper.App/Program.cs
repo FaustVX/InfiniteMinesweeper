@@ -73,7 +73,7 @@ void Draw()
                 {
                     (var back, Console.BackgroundColor) = (Console.BackgroundColor, bgColors[(cellPos.ToChunkPos(out var posInChunk).IsEven, posInChunk.IsEven)]);
                     if (cell.IsFlagged)
-                        Console.Write('?');
+                        Console.Write('?', ConsoleColor.Red);
                     else
                         Console.Write(' ');
                     Console.BackgroundColor = back;
@@ -163,15 +163,22 @@ file static class Ext
             Console.ForegroundColor = fore;
         }
 
+        public static void Write(char c, ConsoleColor foreground)
+        {
+            (var fore, Console.ForegroundColor) = (Console.ForegroundColor, foreground);
+            Console.Write(c);
+            Console.ForegroundColor = fore;
+        }
+
         public static void WriteAtEnd(string text, int rightPadding = 0)
         {
-            Console.CursorLeft = Console.WindowWidth - text.Length - rightPadding;
+            Console.CursorLeft = Console.WindowWidth - text.LengthWithoutEscape - rightPadding;
             Console.Write(text);
         }
 
         public static void WriteCentered(string text)
         {
-            Console.CursorLeft = (Console.WindowWidth - text.Length) / 2;
+            Console.CursorLeft = (Console.WindowWidth - text.LengthWithoutEscape) / 2;
             Console.Write(text);
         }
 
@@ -188,6 +195,26 @@ file static class Ext
         => $"\e[3m{i}\e[23m";
     }
 
+    extension(ReadOnlySpan<char> s)
+    {
+        public int LengthWithoutEscape
+        {
+            get
+            {
+                var totalLength = s.Length;
+                var removed = 0;
+                while (s.IndexOf('\e') is > 0 and var e)
+                {
+                    s = s[e..];
+                    var length = s.IndexOf('m') + 1;
+                    removed += length;
+                    s = s[length..];
+                }
+                return totalLength - removed;
+            }
+        }
+    }
+
     extension(ref readonly Cell c)
     {
         public string ToColoredString(IReadOnlyDictionary<int, ConsoleColor> cluesColor)
@@ -197,7 +224,7 @@ file static class Ext
                 { IsUnexplored: true } => $$"""Pos: {{c.PosInChunk.ToCellPos(c.ChunkPos).ToColoredString()}}, Flag: {{(c.IsFlagged ? Console.WithForeground(ConsoleColor.Blue, 'Y') : "N")}}""",
                 { IsMine: true } => $$"""Pos: {{c.PosInChunk.ToCellPos(c.ChunkPos).ToColoredString()}}, Mine: {{Console.WithForeground(ConsoleColor.Red, 'Y')}}""",
                 { MinesAround: > 0 and var mines } => $$"""Pos: {{c.PosInChunk.ToCellPos(c.ChunkPos).ToColoredString()}}, Mines: {{Console.WithForeground(cluesColor[mines], mines)}}""",
-                {  } => $$"""Pos: {{c.PosInChunk.ToCellPos(c.ChunkPos).ToColoredString()}}, Mines: 0""",
+                { } => $$"""Pos: {{c.PosInChunk.ToCellPos(c.ChunkPos).ToColoredString()}}, Mines: 0""",
             };
         }
     }
