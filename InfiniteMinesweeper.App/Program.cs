@@ -25,6 +25,7 @@ Console.CancelKeyPress += (s, e) => Exit();
 
 var cursor = new Pos(Chunk.Size - 1, Chunk.Size - 1) / 2;
 (int up, int down) offsets = (1, 1);
+Console.Clear();
 while (true)
 {
     Draw();
@@ -38,11 +39,12 @@ void Draw()
 {
     Pos viewport = new(Console.WindowWidth, Console.WindowHeight - (offsets.up + offsets.down));
     Pos center = viewport / 2;
-    Console.Clear();
-    Console.Write(game.GetCell(cursor, ChunkState.NotGenerated).ToColoredString(cluesColors));
+    Console.SetCursorPosition(0, 0);
+    Console.Write($"Cell: {game.GetCell(cursor, ChunkState.NotGenerated).ToColoredString(cluesColors)}   ");
+    Console.WriteCentered($"   Chunk: {game.GetChunk(cursor.ToChunkPos(out _), ChunkState.NotGenerated).ToColoredString()}   ");
     Console.WriteAtEnd((DateTime.Now - timer) is { TotalMinutes: var mins, Seconds: var sec } ? $"{mins:00}:{sec:00}" : "00:00");
-    Console.WriteCentered($"{game.GetChunk(cursor.ToChunkPos(out _), ChunkState.NotGenerated).ToColoredString()}");
     Console.SetCursorPosition(0, offsets.up);
+    Console.CursorVisible = false;
 
     for (int y = offsets.up; y < viewport.Y; y++)
     {
@@ -55,8 +57,6 @@ void Draw()
                 (var back, Console.BackgroundColor) = (Console.BackgroundColor, Console.BackgroundColor = bgColors[(cellPos.ToChunkPos(out var posInChunk).IsEven, posInChunk.IsEven)]);
                 if (cell.IsFlagged)
                     Console.Write('?');
-                else if (new Pos(x, y) == center)
-                    Console.Write('_');
                 else
                     Console.Write(' ');
                 Console.BackgroundColor = back;
@@ -72,10 +72,7 @@ void Draw()
                         Console.Write(mines, cluesColors[mines]);
                         break;
                     default:
-                        if (new Pos(x, y) == center)
-                            Console.Write('_');
-                        else
-                            Console.Write(' ');
+                        Console.Write(' ');
                         break;
                 }
             }
@@ -83,6 +80,8 @@ void Draw()
         Console.WriteLine();
     }
     Console.WriteCentered($"Seed: {Console.WithItalic(game.Seed)}");
+    Console.SetCursorPosition(center.X, center.Y);
+    Console.CursorVisible = true;
 }
 
 bool Update(Game game, ref Pos cursor)
