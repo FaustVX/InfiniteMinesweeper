@@ -1,9 +1,49 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
+
 namespace InfiniteMinesweeper;
+
+file abstract class DictionaryAsArrayJsonConverter<TKey, TValue>(Func<TValue, TKey> keySelector) : JsonConverter<Dictionary<TKey, TValue>>
+    where TKey : notnull
+{
+    public override Dictionary<TKey, TValue>? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        var values = JsonSerializer.Deserialize<List<TValue>>(ref reader, options);
+        if (values == null)
+            return null;
+        var dict = new Dictionary<TKey, TValue>();
+        foreach (var value in values)
+        {
+            dict[keySelector(value)] = value;
+        }
+        return dict;
+    }
+
+    public override void Write(Utf8JsonWriter writer, Dictionary<TKey, TValue> value, JsonSerializerOptions options)
+    {
+        JsonSerializer.Serialize(writer, value.Values.ToList(), options);
+    }
+}
+
+file sealed class ChunkDictJsonConverter : DictionaryAsArrayJsonConverter<Pos, Chunk>
+{
+    public ChunkDictJsonConverter() : base(static c => c.Pos) { }
+}
 
 public class Game(int? seed = null)
 {
+    [JsonConstructor]
+    private Game(int seed, Dictionary<Pos, Chunk> chunks)
+    : this(new int?(seed))
+    {
+        _chunks = chunks;
+    }
+    [JsonIgnore]
     public int MinesPerChunk => 10;
+    [JsonInclude]
     public readonly int Seed = seed ?? Random.Shared.Next();
+    [JsonInclude, JsonPropertyName("Chunks")]
+    // [JsonConverter(typeof(ChunkDictJsonConverter))]
     private readonly Dictionary<Pos, Chunk> _chunks = [];
 
     public Chunk GetChunk(Pos pos, ChunkState desiredState)

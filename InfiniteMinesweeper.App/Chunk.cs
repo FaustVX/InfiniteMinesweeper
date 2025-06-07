@@ -1,13 +1,20 @@
+using System.Text.Json.Serialization;
 using ZLinq;
 
 namespace InfiniteMinesweeper;
 
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "$type")]
+[JsonDerivedType(typeof(Chunk), 0)]
+[JsonDerivedType(typeof(ChunkWithMines), 1)]
+[JsonDerivedType(typeof(ChunkGenerated), 2)]
 public class Chunk(Pos pos, Game game)
 {
     public const int Size = 8;
     private Cell _defaultCell = default(Cell) with { IsUnexplored = true, ChunkPos = pos };
     public Pos Pos { get; } = pos;
+    [JsonIgnore]
     public virtual int RemainingMines => game.MinesPerChunk;
+    [JsonIgnore]
     public virtual ChunkState State => ChunkState.NotGenerated;
     public virtual ref Cell this[Pos pos]
     {
@@ -22,7 +29,9 @@ public class Chunk(Pos pos, Game game)
 
 public sealed class ChunkWithMines(Pos pos, Game game) : Chunk(pos, game)
 {
+    [JsonInclude]
     private readonly Cell[,] _cells = GenerateCells(game, pos);
+    [JsonIgnore]
     public override ChunkState State => ChunkState.MineGenerated;
     public override int RemainingMines => _cells.AsValueEnumerable<Cell>()
         .Sum(static c => (c.IsMine ? 1 : 0) - (c.IsFlagged ? 1 : 0));
@@ -52,7 +61,9 @@ Loop:
 
 public sealed class ChunkGenerated(Pos pos, Game game) : Chunk(pos, game)
 {
+    [JsonInclude]
     private readonly Cell[,] _cells = GenerateCells(game, pos);
+    [JsonIgnore]
     public override ChunkState State => ChunkState.FullyGenerated;
     public override int RemainingMines => _cells.AsValueEnumerable<Cell>()
         .Sum(static c => (c.IsMine ? 1 : 0) - (c.IsFlagged ? 1 : 0));
