@@ -28,7 +28,8 @@
                 "${workspaceFolder}/InfiniteMinesweeper.App",
             ],
             "presentation": {
-                "reveal": "always"
+                "reveal": "always",
+                "focus": true,
             }
         }
     ],
