@@ -28,9 +28,15 @@ public class Game(int? seed = null)
     public void ToggleFlag(Pos cellPos)
     {
         ref var cell = ref GetCell(cellPos, ChunkState.MineGenerated);
-        if (!cell.IsUnexplored)
-            return;
-        cell = cell with { IsFlagged = !cell.IsFlagged };
+        if (cell.IsUnexplored)
+            cell = cell with { IsFlagged = !cell.IsFlagged };
+        else if (cell.MinesAround == GetNeighbors(cellPos).Count(p => GetCell(p, ChunkState.MineGenerated) is { IsUnexplored: true }))
+            foreach (var pos in GetNeighbors(cellPos))
+            {
+                ref var c = ref GetCell(pos, ChunkState.MineGenerated);
+                if (c.IsUnexplored)
+                    c = c with { IsFlagged = true };
+            }
     }
 
     private bool _waitFor1stMove = true;
