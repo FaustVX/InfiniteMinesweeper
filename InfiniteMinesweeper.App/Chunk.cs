@@ -106,7 +106,11 @@ public sealed class ChunkGenerated(Pos pos, Game game) : Chunk(pos, game)
                 cellPos.SouthWest, cellPos.South, cellPos.SouthEast,
             ];
 
-            return neighborCells.AsValueEnumerable()
+            return neighborCells
+#if !NET10_0_OR_GREATER
+            .ToArray()
+#endif
+            .AsValueEnumerable()
                 .Count(p => game.GetCell(p, ChunkState.MineGenerated).IsMine);
         }
     }

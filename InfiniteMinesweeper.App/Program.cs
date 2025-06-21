@@ -5,21 +5,25 @@ using System.Text.Json.Serialization;
 using InfiniteMinesweeper;
 using Spectre.Console;
 
-var bgColors = FrozenDictionary.Create<(bool isChunkEven, bool isCellEven), ConsoleColor>(null,
-    new((true, true), ConsoleColor.Gray),
-    new((true, false), ConsoleColor.DarkGray),
-    new((false, true), ConsoleColor.White),
-    new((false, false), ConsoleColor.Black));
+var bgColors = FrozenDictionary.ToFrozenDictionary<(bool isChunkEven, bool isCellEven), ConsoleColor>(
+    [
+        new((true, true), ConsoleColor.Gray),
+        new((true, false), ConsoleColor.DarkGray),
+        new((false, true), ConsoleColor.White),
+        new((false, false), ConsoleColor.Black)
+    ]);
 
-var cluesColors = FrozenDictionary.Create<int, ConsoleColor>(null,
-    new(1, ConsoleColor.Blue),
-    new(2, ConsoleColor.Green),
-    new(3, ConsoleColor.Red),
-    new(4, ConsoleColor.DarkBlue),
-    new(5, ConsoleColor.DarkRed),
-    new(6, ConsoleColor.Cyan),
-    new(7, ConsoleColor.Yellow),
-    new(8, ConsoleColor.Magenta));
+var cluesColors = FrozenDictionary.ToFrozenDictionary<int, ConsoleColor>(
+    [
+        new(1, ConsoleColor.Blue),
+        new(2, ConsoleColor.Green),
+        new(3, ConsoleColor.Red),
+        new(4, ConsoleColor.DarkBlue),
+        new(5, ConsoleColor.DarkRed),
+        new(6, ConsoleColor.Cyan),
+        new(7, ConsoleColor.Yellow),
+        new(8, ConsoleColor.Magenta)
+    ]);
 
 var game = new Game(AnsiConsole.Ask<int?>("Game seed :", null));
 Console.CursorVisible = false;
