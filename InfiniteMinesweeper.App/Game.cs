@@ -49,10 +49,8 @@ public class Game(int? seed = null, int? minesPerChunk = null)
 
     public Chunk GetChunk(Pos pos, ChunkState desiredState)
     {
-        if (_chunks.TryGetValue(pos, out var chunk) && chunk.State >= desiredState)
-        {
+        if (_chunks.TryGetValue(pos, out var chunk) && chunk is not null && chunk.State >= desiredState)
             return chunk;
-        }
 
         return _chunks[pos] = desiredState switch
         {
