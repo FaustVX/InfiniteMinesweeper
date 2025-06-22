@@ -98,21 +98,7 @@ public sealed class ChunkGenerated(Pos pos, Game game) : Chunk(pos, game)
         return cells;
 
         static int MinesAround(Game game, Pos cellPos)
-        {
-            ReadOnlySpan<Pos> neighborCells =
-            [
-                cellPos.NorthWest, cellPos.North, cellPos.NorthEast,
-                cellPos.West,                     cellPos.East,
-                cellPos.SouthWest, cellPos.South, cellPos.SouthEast,
-            ];
-
-            return neighborCells
-#if !NET10_0_OR_GREATER
-            .ToArray()
-#endif
-            .AsValueEnumerable()
-                .Count(p => game.GetCell(p, ChunkState.MineGenerated).IsMine);
-        }
+        => game.CountArround(cellPos, static c => c.IsMine);
     }
 }
 
@@ -123,7 +109,11 @@ public enum ChunkState
     FullyGenerated,
 }
 
-public readonly record struct Cell(int MinesAround, Pos PosInChunk, Pos ChunkPos, bool IsMine, bool IsFlagged, bool IsUnexplored);
+public readonly record struct Cell(int MinesAround, Pos PosInChunk, Pos ChunkPos, bool IsMine, bool IsFlagged, bool IsUnexplored)
+{
+    public readonly int RemainingMines(Game game)
+    => MinesAround - game.CountArround(PosInChunk.ToCellPos(ChunkPos), static c => c.IsFlagged || (!c.IsUnexplored && c.IsMine));
+}
 
 file static class Ext
 {
@@ -133,7 +123,7 @@ file static class Ext
         {
             int x = rng.Next(Chunk.Size);
             int y = rng.Next(Chunk.Size);
-            return new Pos(x, y);
+            return new(x, y);
         }
     }
 }

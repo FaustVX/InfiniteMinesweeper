@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using ZLinq;
 
 namespace InfiniteMinesweeper;
 
@@ -111,7 +112,7 @@ public class Game(int? seed = null)
             if (cell.IsMine)
                 throw new ExplodeException();
             var count = 1;
-            if (cell.MinesAround == 0 && !cell.IsMine)
+            if (cell.RemainingMines(this) == 0 && !cell.IsMine)
                 foreach (var neighbor in GetNeighbors(cellPos))
                     count += ExploreUnexplored(neighbor);
             return count;
@@ -141,6 +142,18 @@ public class Game(int? seed = null)
     {
         foreach (var pos in NeighborCells)
             yield return pos + cellPos;
+    }
+
+    public int CountArround(Pos cellPos, Func<Cell, bool> predicate)
+    {
+        ReadOnlySpan<Pos> neighborCells = [.. GetNeighbors(cellPos)];
+
+        return neighborCells
+#if !NET10_0_OR_GREATER
+        .ToArray()
+#endif
+        .AsValueEnumerable()
+        .Count(p => predicate(GetCell(p, ChunkState.MineGenerated)));
     }
 }
 
