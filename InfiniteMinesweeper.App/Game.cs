@@ -31,7 +31,7 @@ file sealed class ChunkDictJsonConverter : DictionaryAsArrayJsonConverter<Pos, C
     public ChunkDictJsonConverter() : base(static c => c.Pos) { }
 }
 
-public class Game(int? seed = null)
+public class Game(int? seed = null, int? minesPerChunk = null)
 {
     [JsonConstructor]
     private Game(int seed, Dictionary<Pos, Chunk> chunks)
@@ -39,8 +39,8 @@ public class Game(int? seed = null)
     {
         _chunks = chunks;
     }
-    [JsonIgnore]
-    public int MinesPerChunk => 10;
+
+    public int MinesPerChunk { get; } = minesPerChunk is >= 0 and < (Chunk.Size * Chunk.Size) ? minesPerChunk.Value : 10;
     [JsonInclude]
     public readonly int Seed = seed ?? Random.Shared.Next();
     [JsonInclude, JsonPropertyName("Chunks")]
