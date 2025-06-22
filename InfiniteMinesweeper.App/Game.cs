@@ -71,7 +71,7 @@ public class Game(int? seed = null)
         ref var cell = ref GetCell(cellPos, ChunkState.MineGenerated);
         if (cell.IsUnexplored)
             cell = cell with { IsFlagged = !cell.IsFlagged };
-        else if (cell.MinesAround == GetNeighbors(cellPos).Count(p => GetCell(p, ChunkState.MineGenerated) is { IsUnexplored: true }))
+        else if (cell.MinesAround == CountArround(cellPos, static c => c.IsUnexplored || c.IsMine))
             foreach (var pos in GetNeighbors(cellPos))
             {
                 ref var c = ref GetCell(pos, ChunkState.MineGenerated);
@@ -124,7 +124,7 @@ public class Game(int? seed = null)
             if (cell.IsFlagged)
                 return 0;
             var count = 0;
-            if (cell.MinesAround == GetNeighbors(cellPos).Count(p => GetCell(p, ChunkState.MineGenerated) is { IsFlagged: true }) && !cell.IsMine)
+            if (cell.MinesAround == CountArround(cellPos, static c => c.IsFlagged || (!c.IsUnexplored && c.IsMine)) && !cell.IsMine)
                 foreach (var neighbor in GetNeighbors(cellPos))
                     count += ExploreUnexplored(neighbor);
             return count;
