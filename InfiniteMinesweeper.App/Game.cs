@@ -66,8 +66,11 @@ public class Game(int? seed = null, int? minesPerChunk = null)
         var group1 = (stackalloc Pos[9]);
         int i = 0;
         foreach (var n in GetNeighbors(pos1))
-            group1[i++] = n;
-        group1[i] = pos1;
+            if (GetCell(n, ChunkState.NotGenerated).IsUnexplored)
+                group1[i++] = n;
+        if (GetCell(pos1, ChunkState.NotGenerated).IsUnexplored)
+            group1[i++] = pos1;
+        group1 = group1[..i];
 
         if (pos1 == pos2)
         {
@@ -79,8 +82,11 @@ public class Game(int? seed = null, int? minesPerChunk = null)
         var group2 = (stackalloc Pos[9]);
         i = 0;
         foreach (var n in GetNeighbors(pos2))
-            group2[i++] = n;
-        group2[i] = pos2;
+            if (GetCell(n, ChunkState.NotGenerated).IsUnexplored)
+                group2[i++] = n;
+        if (GetCell(pos2, ChunkState.NotGenerated).IsUnexplored)
+            group2[i++] = pos2;
+        group2 = group2[..i];
 
         // Intersect
         var intersect = (stackalloc Pos[9]);
@@ -88,6 +94,7 @@ public class Game(int? seed = null, int? minesPerChunk = null)
         foreach (var p1 in group1)
             if (group2.Contains(p1))
                 intersect[intersectCount++] = p1;
+        intersect = intersect[..intersectCount];
 
         if (intersectCount == 0)
         {
@@ -101,20 +108,22 @@ public class Game(int? seed = null, int? minesPerChunk = null)
         var only1 = (stackalloc Pos[9]);
         int only1Count = 0;
         foreach (var p in group1)
-            if (!intersect[..intersectCount].Contains(p))
+            if (!intersect.Contains(p))
                 only1[only1Count++] = p;
+        only1 = only1[..only1Count];
 
         // Only in group2
         var only2 = (stackalloc Pos[9]);
         int only2Count = 0;
         foreach (var p in group2)
-            if (!intersect[..intersectCount].Contains(p))
+            if (!intersect.Contains(p))
                 only2[only2Count++] = p;
+        only2 = only2[..only2Count];
 
         {
-            HashSet<Pos> hash1 = [.. only1[..only1Count]];
-            HashSet<Pos> hash2 = [.. only2[..only2Count]];
-            HashSet<Pos> inter = [.. intersect[..intersectCount]];
+            HashSet<Pos> hash1 = [.. only1];
+            HashSet<Pos> hash2 = [.. only2];
+            HashSet<Pos> inter = [.. intersect];
             return [hash1, hash2, inter];
         }
     }
