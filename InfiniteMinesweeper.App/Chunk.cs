@@ -66,7 +66,7 @@ public sealed class ChunkGenerated(Pos pos, Game game) : Chunk(pos, game)
     [JsonIgnore]
     public override ChunkState State => ChunkState.FullyGenerated;
     public override int RemainingMines => _cells.AsValueEnumerable<Cell>()
-        .Sum(static c => (c.IsMine ? 1 : 0) - (c.IsFlagged ? 1 : 0));
+        .Sum(static c => (c.IsMine ? 1 : 0) - (c.IsFlagged ? 1 : 0) - (c is { IsMine: true, IsUnexplored: false } ? 1 : 0));
 
     public override ref Cell this[Pos pos]
     => ref _cells[pos.X, pos.Y];
