@@ -3,18 +3,20 @@ using ZLinq;
 
 namespace InfiniteMinesweeper;
 
-[JsonPolymorphic(TypeDiscriminatorPropertyName = "$type")]
-[JsonDerivedType(typeof(Chunk), 0)]
-[JsonDerivedType(typeof(ChunkWithMines), 1)]
-[JsonDerivedType(typeof(ChunkGenerated), 2)]
+// [JsonPolymorphic(TypeDiscriminatorPropertyName = "$type")]
+// [JsonDerivedType(typeof(Chunk), 0)]
+// [JsonDerivedType(typeof(ChunkWithMines), 1)]
+// [JsonDerivedType(typeof(ChunkGenerated), 2)]
 public class Chunk(Pos pos, Game game)
 {
+    [JsonInclude]
+    protected readonly Game _game = game;
     public const int Size = 8;
+    [JsonIgnore]
     private Cell _defaultCell = default(Cell) with { IsUnexplored = true, ChunkPos = pos };
     public Pos Pos { get; } = pos;
     [JsonIgnore]
-    public virtual int RemainingMines => game.MinesPerChunk;
-    [JsonIgnore]
+    public virtual int RemainingMines => _game.MinesPerChunk;
     public virtual ChunkState State => ChunkState.NotGenerated;
     public virtual ref Cell this[Pos pos]
     {
@@ -27,12 +29,23 @@ public class Chunk(Pos pos, Game game)
     }
 }
 
-public sealed class ChunkWithMines(Pos pos, Game game) : Chunk(pos, game)
+public sealed class ChunkWithMines : Chunk
 {
+    public ChunkWithMines(Pos pos, Game game)
+    : base(pos, game)
+    {
+        _cells = GenerateCells(game, pos);
+    }
+    [JsonConstructor]
+    internal ChunkWithMines(Pos pos, Game game, Cell[,] cells)
+    : base(pos, game)
+    {
+        _cells = cells;
+    }
     [JsonInclude]
-    private readonly Cell[,] _cells = GenerateCells(game, pos);
-    [JsonIgnore]
+    private readonly Cell[,] _cells;
     public override ChunkState State => ChunkState.MineGenerated;
+    [JsonIgnore]
     public override int RemainingMines => _cells.AsValueEnumerable<Cell>()
         .Sum(static c => (c.IsMine ? 1 : 0) - (c.IsFlagged ? 1 : 0));
 
@@ -59,12 +72,23 @@ Loop:
     }
 }
 
-public sealed class ChunkGenerated(Pos pos, Game game) : Chunk(pos, game)
+public sealed class ChunkGenerated : Chunk
 {
+    public ChunkGenerated(Pos pos, Game game)
+    : base(pos, game)
+    {
+        _cells = GenerateCells(game, pos);
+    }
+    [JsonConstructor]
+    internal ChunkGenerated(Pos pos, Game game, Cell[,] cells)
+    : base(pos, game)
+    {
+        _cells = cells;
+    }
     [JsonInclude]
-    private readonly Cell[,] _cells = GenerateCells(game, pos);
-    [JsonIgnore]
+    private readonly Cell[,] _cells;
     public override ChunkState State => ChunkState.FullyGenerated;
+    [JsonIgnore]
     public override int RemainingMines => _cells.AsValueEnumerable<Cell>()
         .Sum(static c => (c.IsMine ? 1 : 0) - (c.IsFlagged ? 1 : 0) - (c is { IsMine: true, IsUnexplored: false } ? 1 : 0));
 

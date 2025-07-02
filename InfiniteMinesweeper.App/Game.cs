@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using ZLinq;
@@ -31,11 +33,274 @@ file sealed class ChunkDictJsonConverter : DictionaryAsArrayJsonConverter<Pos, C
     public ChunkDictJsonConverter() : base(static c => c.Pos) { }
 }
 
+file sealed class PosJsonConverter : JsonConverter<Pos>
+{
+    public override Pos ReadAsPropertyName(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        var s = reader.GetString() ?? throw new JsonException("Property name is null.");
+        // Expect input as "{ X: -5, Y: -3 }"
+        // Remove braces and split
+        s = s.Trim();
+        if (!s.StartsWith('{') || !s.EndsWith('}'))
+            throw new JsonException($"Invalid Pos format: {s}");
+        s = s[1..^1].Trim(); // Remove '{' and '}'
+        var parts = s.Split(',');
+        int x = 0, y = 0;
+        foreach (var part in parts)
+        {
+            var kv = part.Split(':', 2);
+            if (kv.Length != 2)
+                throw new JsonException($"Invalid Pos part: {part}");
+            var key = kv[0].Trim();
+            var value = kv[1].Trim();
+            if (key == "X")
+                x = int.Parse(value);
+            else if (key == "Y")
+                y = int.Parse(value);
+            else
+                throw new JsonException($"Unknown Pos key: {key}");
+        }
+        return new(x, y);
+    }
+
+    public override void WriteAsPropertyName(Utf8JsonWriter writer, [DisallowNull] Pos value, JsonSerializerOptions options)
+    {
+        writer.WritePropertyName(value.ToString());
+    }
+
+    public override Pos Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        throw new NotImplementedException();
+    }
+
+    public override void Write(Utf8JsonWriter writer, Pos value, JsonSerializerOptions options)
+    {
+        writer.WriteStartObject();
+        writer.WriteNumber("X", value.X);
+        writer.WriteNumber("Y", value.Y);
+        writer.WriteEndObject();
+    }
+}
+
+file sealed class Array2DJsonConverter<T> : JsonConverter<T[,]>
+{
+    public override T[,]? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        if (reader.TokenType != JsonTokenType.StartArray)
+            throw new JsonException();
+
+        var items = new List<List<T>>();
+        int? width = null;
+
+        while (reader.Read())
+        {
+            if (reader.TokenType == JsonTokenType.EndArray)
+                break;
+
+            if (reader.TokenType != JsonTokenType.StartArray)
+                throw new JsonException();
+
+            var row = new List<T>();
+            while (reader.Read())
+            {
+                if (reader.TokenType == JsonTokenType.EndArray)
+                    break;
+
+                row.Add(JsonSerializer.Deserialize<T>(ref reader, options)!);
+            }
+
+            width ??= row.Count;
+            if (row.Count != width)
+                throw new JsonException("Jagged arrays are not supported.");
+
+            items.Add(row);
+        }
+
+        var height = items.Count;
+        if (width is null)
+            return new T[0, 0];
+
+        var array = new T[height, width.Value];
+        for (int i = 0; i < height; i++)
+            for (int j = 0; j < width; j++)
+                array[i, j] = items[i][j];
+
+        return array;
+    }
+
+    public override void Write(Utf8JsonWriter writer, T[,] value, JsonSerializerOptions options)
+    {
+        int height = value.GetLength(0);
+        int width = value.GetLength(1);
+
+        writer.WriteStartArray();
+        for (int i = 0; i < height; i++)
+        {
+            writer.WriteStartArray();
+            for (int j = 0; j < width; j++)
+            {
+                JsonSerializer.Serialize(writer, value[i, j], options);
+            }
+            writer.WriteEndArray();
+        }
+        writer.WriteEndArray();
+    }
+}
+
+file sealed class GameJsonConverter : JsonConverter<Game>
+{
+    public override Game? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        if (reader.TokenType != JsonTokenType.StartObject)
+            throw new JsonException();
+
+        int? seed = null;
+        int? minesPerChunk = null;
+        Dictionary<Pos, Chunk>? chunks = null;
+
+        while (reader.Read())
+        {
+            if (reader.TokenType == JsonTokenType.EndObject)
+                break;
+
+            if (reader.TokenType != JsonTokenType.PropertyName)
+                throw new JsonException();
+
+            string propertyName = reader.GetString()!;
+            reader.Read();
+
+            switch (propertyName)
+            {
+                case "Seed":
+                    seed = reader.GetInt32();
+                    break;
+                case "minesPerChunk":
+                case "MinesPerChunk":
+                    minesPerChunk = reader.GetInt32();
+                    break;
+                case "Chunks":
+                    chunks = JsonSerializer.Deserialize<Dictionary<Pos, Chunk>>(ref reader, options);
+                    break;
+                default:
+                    reader.Skip();
+                    break;
+            }
+        }
+
+        if (seed is null || chunks is null || minesPerChunk is null)
+            throw new JsonException("Missing required properties for Game.");
+
+        return new(seed.Value, chunks, minesPerChunk.Value);
+    }
+
+    public override void Write(Utf8JsonWriter writer, Game value, JsonSerializerOptions options)
+    {
+        throw new NotImplementedException();
+    }
+}
+
+file sealed class ChunkJsonConverter() : JsonConverter<Chunk>
+{
+    public override Chunk? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        if (reader.TokenType != JsonTokenType.StartObject)
+            throw new JsonException();
+
+        Pos? pos = null;
+        Cell[,]? cells = null;
+        ChunkState? state = null;
+
+        while (reader.Read())
+        {
+            if (reader.TokenType == JsonTokenType.EndObject)
+                break;
+
+            if (reader.TokenType != JsonTokenType.PropertyName)
+                throw new JsonException();
+
+            string propertyName = reader.GetString()!;
+            reader.Read();
+
+            switch (propertyName)
+            {
+                case "State":
+                    var stateStr = reader.GetString();
+                    state = stateStr switch
+                    {
+                        nameof(ChunkState.MineGenerated) => ChunkState.MineGenerated,
+                        nameof(ChunkState.FullyGenerated) => ChunkState.FullyGenerated,
+                        _ => ChunkState.NotGenerated
+                    };
+                    break;
+                case "Pos":
+                    pos = JsonSerializer.Deserialize<Pos>(ref reader, options);
+                    break;
+                case "_cells":
+                    cells = JsonSerializer.Deserialize<Cell[,]>(ref reader, options);
+                    break;
+                default:
+                    reader.Skip();
+                    break;
+            }
+        }
+
+        if (pos is null || state is null)
+            throw new JsonException("Missing required properties for Chunk.");
+
+        // Find Game instance from options or context if needed
+        // For this context, we can't get Game, so pass null (should be set after deserialization)
+        // If you need Game, you must provide a way to resolve it here
+
+        return state switch
+        {
+            ChunkState.MineGenerated => new ChunkWithMines(pos.Value, null!, cells!),
+            ChunkState.FullyGenerated => new ChunkGenerated(pos.Value, null!, cells!),
+            ChunkState.NotGenerated or _ => new Chunk(pos.Value, null!),
+        };
+    }
+
+    public override void Write(Utf8JsonWriter writer, Chunk value, JsonSerializerOptions options)
+    {
+        switch (value)
+        {
+            case ChunkWithMines withMines:
+                writer.WriteStartObject();
+                writer.WriteString("State", nameof(ChunkState.MineGenerated));
+                writer.WritePropertyName("Pos");
+                JsonSerializer.Serialize(writer, withMines.Pos, options);
+                writer.WritePropertyName("_cells");
+                var cells = GetCell(withMines);
+                JsonSerializer.Serialize(writer, cells, options);
+                writer.WriteEndObject();
+                break;
+            case ChunkGenerated generated:
+                writer.WriteStartObject();
+                writer.WriteString("State", nameof(ChunkState.FullyGenerated));
+                writer.WritePropertyName("Pos");
+                JsonSerializer.Serialize(writer, generated.Pos, options);
+                writer.WritePropertyName("_cells");
+                var genCells = GetCell(generated);
+                JsonSerializer.Serialize(writer, genCells, options);
+                writer.WriteEndObject();
+                break;
+            case { State: ChunkState.NotGenerated }:
+                break;
+            default:
+                throw new JsonException($"Unknown chunk state: {value.State}");
+        }
+    }
+
+    [UnsafeAccessor(UnsafeAccessorKind.Field, Name = "_cells")]
+    private extern ref readonly Cell[,] GetCell(ChunkWithMines chunk);
+    [UnsafeAccessor(UnsafeAccessorKind.Field, Name = "_cells")]
+    private extern ref readonly Cell[,] GetCell(ChunkGenerated chunk);
+}
+
 public class Game(int? seed = null, int? minesPerChunk = null)
 {
     [JsonConstructor]
-    private Game(int seed, Dictionary<Pos, Chunk> chunks)
-    : this(new int?(seed))
+    internal Game(int seed, Dictionary<Pos, Chunk> chunks, int minesPerChunk)
+    : this(seed, minesPerChunk)
     {
         _chunks = chunks;
     }
@@ -220,6 +485,15 @@ public class Game(int? seed = null, int? minesPerChunk = null)
         .AsValueEnumerable()
         .Count(p => predicate(GetCell(p, ChunkState.MineGenerated)));
     }
+
+    public void Save(FileInfo file)
+    {
+        var json = JsonSerializer.Serialize(this, new JsonSerializerOptions() { Converters = { new PosJsonConverter(), new Array2DJsonConverter<Cell>(), new ChunkJsonConverter() }, ReferenceHandler = ReferenceHandler.Preserve });
+        File.WriteAllText(file.FullName, json);
+    }
+
+    public static Game Load(FileInfo file)
+    => JsonSerializer.Deserialize<Game>(File.ReadAllText(file.FullName), new JsonSerializerOptions() { Converters = { new PosJsonConverter(), new Array2DJsonConverter<Cell>(), new GameJsonConverter(), new ChunkJsonConverter() }, IncludeFields = true, PropertyNameCaseInsensitive = false, ReferenceHandler = ReferenceHandler.Preserve })!;
 }
 
 [Serializable]
