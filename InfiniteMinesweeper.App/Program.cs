@@ -22,7 +22,7 @@ var cluesColors = FrozenDictionary.ToFrozenDictionary<int, ConsoleColor>(
         new(8, ConsoleColor.Magenta)
     ]);
 
-var game = new Game(AnsiConsole.Ask<int?>("Game seed :", null));
+var game = args is [var path] ? Game.Load(new(path)) : new Game(AnsiConsole.Ask<int?>("Game seed :", null));
 Console.CursorVisible = false;
 var cts = new CancellationTokenSource();
 using var timer = Task.Run(async () =>
