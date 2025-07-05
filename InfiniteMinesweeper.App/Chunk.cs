@@ -1,21 +1,15 @@
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using ZLinq;
 
 namespace InfiniteMinesweeper;
 
-// [JsonPolymorphic(TypeDiscriminatorPropertyName = "$type")]
-// [JsonDerivedType(typeof(Chunk), 0)]
-// [JsonDerivedType(typeof(ChunkWithMines), 1)]
-// [JsonDerivedType(typeof(ChunkGenerated), 2)]
 public class Chunk(Pos pos, Game game)
 {
-    [JsonInclude]
     protected readonly Game _game = game;
     public const int Size = 8;
-    [JsonIgnore]
     private Cell _defaultCell = default(Cell) with { IsUnexplored = true, ChunkPos = pos };
     public Pos Pos { get; } = pos;
-    [JsonIgnore]
     public virtual int RemainingMines => _game.MinesPerChunk;
     public virtual ChunkState State => ChunkState.NotGenerated;
     public virtual ref Cell this[Pos pos]
@@ -33,19 +27,12 @@ public sealed class ChunkWithMines : Chunk
 {
     public ChunkWithMines(Pos pos, Game game)
     : base(pos, game)
-    {
-        _cells = GenerateCells(game, pos);
-    }
-    [JsonConstructor]
+    => _cells = GenerateCells(game, pos);
     internal ChunkWithMines(Pos pos, Game game, Cell[,] cells)
     : base(pos, game)
-    {
-        _cells = cells;
-    }
-    [JsonInclude]
+    => _cells = cells;
     private readonly Cell[,] _cells;
     public override ChunkState State => ChunkState.MineGenerated;
-    [JsonIgnore]
     public override int RemainingMines => _cells.AsValueEnumerable<Cell>()
         .Sum(static c => (c.IsMine ? 1 : 0) - (c.IsFlagged ? 1 : 0));
 
@@ -70,25 +57,33 @@ Loop:
         }
         return cells;
     }
+
+    public static JsonConverter<ChunkWithMines> JsonConverter { get; } = new Converter();
+
+    private sealed class Converter : JsonConverter<ChunkWithMines>
+    {
+        public override ChunkWithMines? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        {
+            return default;
+        }
+
+        public override void Write(Utf8JsonWriter writer, ChunkWithMines value, JsonSerializerOptions options)
+        {
+            return;
+        }
+    }
 }
 
 public sealed class ChunkGenerated : Chunk
 {
     public ChunkGenerated(Pos pos, Game game)
     : base(pos, game)
-    {
-        _cells = GenerateCells(game, pos);
-    }
-    [JsonConstructor]
+    => _cells = GenerateCells(game, pos);
     internal ChunkGenerated(Pos pos, Game game, Cell[,] cells)
     : base(pos, game)
-    {
-        _cells = cells;
-    }
-    [JsonInclude]
+    => _cells = cells;
     private readonly Cell[,] _cells;
     public override ChunkState State => ChunkState.FullyGenerated;
-    [JsonIgnore]
     public override int RemainingMines => _cells.AsValueEnumerable<Cell>()
         .Sum(static c => (c.IsMine ? 1 : 0) - (c.IsFlagged ? 1 : 0) - (c is { IsMine: true, IsUnexplored: false } ? 1 : 0));
 
@@ -124,6 +119,21 @@ public sealed class ChunkGenerated : Chunk
         static int MinesAround(Game game, Pos cellPos)
         => game.CountArround(cellPos, static c => c.IsMine);
     }
+
+    public static JsonConverter<ChunkGenerated> JsonConverter { get; } = new Converter();
+
+    private sealed class Converter : JsonConverter<ChunkGenerated>
+    {
+        public override ChunkGenerated? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        {
+            return default;
+        }
+
+        public override void Write(Utf8JsonWriter writer, ChunkGenerated value, JsonSerializerOptions options)
+        {
+            return;
+        }
+    }
 }
 
 public enum ChunkState
@@ -137,6 +147,21 @@ public readonly record struct Cell(int MinesAround, Pos PosInChunk, Pos ChunkPos
 {
     public readonly int RemainingMines(Game game)
     => MinesAround - game.CountArround(PosInChunk.ToCellPos(ChunkPos), static c => c.IsFlagged || (!c.IsUnexplored && c.IsMine));
+
+    public static JsonConverter<Cell> JsonConverter { get; } = new Converter();
+
+    private sealed class Converter : JsonConverter<Cell>
+    {
+        public override Cell Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        {
+            return default;
+        }
+
+        public override void Write(Utf8JsonWriter writer, Cell value, JsonSerializerOptions options)
+        {
+            return;
+        }
+    }
 }
 
 file static class Ext

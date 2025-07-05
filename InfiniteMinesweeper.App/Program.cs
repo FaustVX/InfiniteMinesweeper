@@ -25,7 +25,7 @@ var cluesColors = FrozenDictionary.ToFrozenDictionary<int, ConsoleColor>(
 var game = new Game(AnsiConsole.Ask<int?>("Game seed :", null));
 Console.CursorVisible = false;
 var cts = new CancellationTokenSource();
-var timer = Task.Run(async () =>
+using var timer = Task.Run(async () =>
 {
     var start = DateTime.Now;
     var timer = new PeriodicTimer(TimeSpan.FromSeconds(.5));

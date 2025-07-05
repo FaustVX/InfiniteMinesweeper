@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace InfiniteMinesweeper;
@@ -18,28 +19,20 @@ public readonly record struct Pos(int X, int Y)
         ((a.Y % scalar) + scalar) % scalar
     );
 
-    [JsonIgnore]
     public Pos East
     => new(X + 1, Y);
-    [JsonIgnore]
     public Pos West
     => new(X - 1, Y);
-    [JsonIgnore]
     public Pos North
     => new(X, Y - 1);
-    [JsonIgnore]
     public Pos South
     => new(X, Y + 1);
-    [JsonIgnore]
     public Pos NorthEast
     => North.East;
-    [JsonIgnore]
     public Pos NorthWest
     => North.West;
-    [JsonIgnore]
     public Pos SouthEast
     => South.East;
-    [JsonIgnore]
     public Pos SouthWest
     => South.West;
 
@@ -60,4 +53,19 @@ public readonly record struct Pos(int X, int Y)
 
     public override string ToString()
     => $$"""{ X: {{X}}, Y: {{Y}} }""";
+
+    public static JsonConverter<Pos> JsonConverter { get; } = new Converter();
+
+    private sealed class Converter : JsonConverter<Pos>
+    {
+        public override Pos Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        {
+            return default;
+        }
+
+        public override void Write(Utf8JsonWriter writer, Pos value, JsonSerializerOptions options)
+        {
+            return;
+        }
+    }
 }
