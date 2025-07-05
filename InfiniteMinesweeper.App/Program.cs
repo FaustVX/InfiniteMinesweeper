@@ -22,7 +22,13 @@ var cluesColors = FrozenDictionary.ToFrozenDictionary<int, ConsoleColor>(
         new(8, ConsoleColor.Magenta)
     ]);
 
-var game = args is [var path] ? Game.Load(new(path)) : new Game(AnsiConsole.Ask<int?>("Game seed :", null));
+var game = args switch
+{
+    [var arg] when new FileInfo(arg) is { Exists: true } path => Game.Load(path),
+    [var arg] when int.TryParse(arg, out var seed) => new Game(seed),
+    _ => new Game(AnsiConsole.Ask<int?>("Game seed :", null)),
+};
+
 Console.CursorVisible = false;
 var cts = new CancellationTokenSource();
 using var timer = Task.Run(async () =>
