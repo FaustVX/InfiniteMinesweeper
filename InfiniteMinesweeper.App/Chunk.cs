@@ -1,3 +1,5 @@
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using ZLinq;
@@ -27,10 +29,21 @@ public sealed class ChunkWithMines : Chunk
 {
     public ChunkWithMines(Pos pos, Game game)
     : base(pos, game)
-    => _cells = GenerateCells(game, pos);
-    internal ChunkWithMines(Pos pos, Game game, Cell[,] cells)
-    : base(pos, game)
-    => _cells = cells;
+    => _cells = GenerateCells(pos);
+    private ChunkWithMines(Pos pos)
+    : base(pos, null!)
+    => _cells = new Cell[Size, Size];
+
+    internal void GenerateAfterDeserialization(Game game)
+    {
+        GetGame(this) = game;
+        GetCells(this) = GenerateCells(Pos);
+
+        [UnsafeAccessor(UnsafeAccessorKind.Field, Name = "_game")]
+        static extern ref Game GetGame(Chunk chunk);
+        [UnsafeAccessor(UnsafeAccessorKind.Field, Name = nameof(_cells))]
+        static extern ref Cell[,] GetCells(ChunkWithMines chunk);
+    }
     private readonly Cell[,] _cells;
     public override ChunkState State => ChunkState.MineGenerated;
     public override int RemainingMines => _cells.AsValueEnumerable<Cell>()
@@ -39,14 +52,14 @@ public sealed class ChunkWithMines : Chunk
     public override ref Cell this[Pos pos]
     => ref _cells[pos.X, pos.Y];
 
-    static Cell[,] GenerateCells(Game game, Pos pos)
+    private Cell[,] GenerateCells(Pos pos)
     {
-        var cells = new Cell[Size, Size];
+        var cells = _cells ?? new Cell[Size, Size];
         for (int i = 0; i < Size; i++)
             for (int j = 0; j < Size; j++)
-                cells[i, j] = new Cell(0, new(i, j), pos, false, false, IsUnexplored: true);
-        var rng = new Random(game.Seed + pos.GetHashCode());
-        for (int i = 0; i < game.MinesPerChunk; i++)
+                cells[i, j] = new Cell(0, new(i, j), pos, IsMine: false, !cells[i, j].IsDefault && cells[i, j].IsFlagged, cells[i, j].IsDefault || cells[i, j].IsUnexplored);
+        var rng = new Random(_game.Seed + pos.GetHashCode());
+        for (int i = 0; i < _game.MinesPerChunk; i++)
         {
 Loop:
             var mine = rng.NextPos();
@@ -64,6 +77,52 @@ Loop:
     {
         public override ChunkWithMines? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
+            if (reader.TokenType != JsonTokenType.StartObject)
+                throw new JsonException();
+
+            int? x = null;
+            int? y = null;
+            List<Cell> cells = [];
+
+            while (reader.TryGetProperty(out var propertyName))
+            {
+                switch (propertyName)
+                {
+                    case "X":
+                        x = JsonSerializer.Deserialize<int>(ref reader, options);
+                        break;
+                    case "Y":
+                        y = JsonSerializer.Deserialize<int>(ref reader, options);
+                        break;
+                    case "Cells":
+                        if (reader.TokenType == JsonTokenType.StartArray)
+                            while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
+                            {
+                                var cell = JsonSerializer.Deserialize<Cell>(ref reader, options);
+                                cells.Add(cell);
+                            }
+                        else
+                            throw new JsonException();
+                        break;
+                }
+            }
+
+            if (x is int i && y is int j)
+            {
+                var chunk = new ChunkWithMines(new(i, j));
+                foreach (ref var c in CollectionsMarshal.AsSpan(cells))
+                {
+                    ref var o = ref chunk[c.PosInChunk];
+                    o = c with
+                    {
+                        ChunkPos = chunk.Pos,
+                        IsMine = o.IsMine,
+                        MinesAround = o.MinesAround,
+                    };
+                }
+                return chunk;
+            }
+
             return default;
         }
 
@@ -79,9 +138,6 @@ public sealed class ChunkGenerated : Chunk
     public ChunkGenerated(Pos pos, Game game)
     : base(pos, game)
     => _cells = GenerateCells(game, pos);
-    internal ChunkGenerated(Pos pos, Game game, Cell[,] cells)
-    : base(pos, game)
-    => _cells = cells;
     private readonly Cell[,] _cells;
     public override ChunkState State => ChunkState.FullyGenerated;
     public override int RemainingMines => _cells.AsValueEnumerable<Cell>()
@@ -107,32 +163,19 @@ public sealed class ChunkGenerated : Chunk
             for (int j = 0; j < Size; j++)
             {
                 Pos cellPos = new(i, j);
-                cells[i, j] = game.GetCell(cellPos.ToCellPos(pos), ChunkState.MineGenerated) with
+                ref var cell = ref game.GetCell(cellPos.ToCellPos(pos), ChunkState.MineGenerated);
+                cell = cell with
                 {
                     MinesAround = MinesAround(game, cellPos.ToCellPos(pos)),
-                    IsUnexplored = true
+                    IsUnexplored = cell.IsDefault || cell.IsUnexplored,
+                    IsFlagged = !cell.IsDefault && cell.IsFlagged,
                 };
+                cells[i, j] = cell;
             }
-
         return cells;
 
         static int MinesAround(Game game, Pos cellPos)
         => game.CountArround(cellPos, static c => c.IsMine);
-    }
-
-    public static JsonConverter<ChunkGenerated> JsonConverter { get; } = new Converter();
-
-    private sealed class Converter : JsonConverter<ChunkGenerated>
-    {
-        public override ChunkGenerated? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-        {
-            return default;
-        }
-
-        public override void Write(Utf8JsonWriter writer, ChunkGenerated value, JsonSerializerOptions options)
-        {
-            return;
-        }
     }
 }
 

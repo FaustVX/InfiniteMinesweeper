@@ -50,7 +50,7 @@ while (true)
 {
     Draw();
 
-    if (!Update(game, ref cursor))
+    if (!Update(ref game, ref cursor))
         break;
 }
 Exit();
@@ -106,7 +106,7 @@ void Draw()
     }
 }
 
-bool Update(Game game, ref Pos cursor)
+bool Update(ref Game game, ref Pos cursor)
 {
     switch (Console.ReadKey(intercept: true))
     {
@@ -138,7 +138,9 @@ bool Update(Game game, ref Pos cursor)
             break;
         case { Key: ConsoleKey.S }:
             game.Save(new("save.json"));
-            var g = Game.Load(new("save.json"));
+            break;
+        case { Key: ConsoleKey.L }:
+            game = Game.Load(new("save.json"));
             break;
     }
     return true;

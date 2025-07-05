@@ -1,6 +1,3 @@
-using System.Text.Json;
-using System.Text.Json.Serialization;
-
 namespace InfiniteMinesweeper;
 
 public readonly record struct Pos(int X, int Y)
@@ -53,19 +50,4 @@ public readonly record struct Pos(int X, int Y)
 
     public override string ToString()
     => $$"""{ X: {{X}}, Y: {{Y}} }""";
-
-    public static JsonConverter<Pos> JsonConverter { get; } = new Converter();
-
-    private sealed class Converter : JsonConverter<Pos>
-    {
-        public override Pos Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-        {
-            return default;
-        }
-
-        public override void Write(Utf8JsonWriter writer, Pos value, JsonSerializerOptions options)
-        {
-            return;
-        }
-    }
 }
