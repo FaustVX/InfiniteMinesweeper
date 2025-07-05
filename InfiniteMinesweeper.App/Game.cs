@@ -100,13 +100,13 @@ public class Game(int? seed = null, int? minesPerChunk = null)
 
     public void ToggleFlag(Pos cellPos)
     {
-        ref var cell = ref GetCell(cellPos, ChunkState.MineGenerated);
+        ref var cell = ref GetCell(cellPos, ChunkState.FullyGenerated);
         if (cell.IsUnexplored)
             cell = cell with { IsFlagged = !cell.IsFlagged };
         else if (cell.MinesAround == CountArround(cellPos, static c => c.IsUnexplored || c.IsMine))
             foreach (var pos in GetNeighbors(cellPos))
             {
-                ref var c = ref GetCell(pos, ChunkState.MineGenerated);
+                ref var c = ref GetCell(pos, ChunkState.FullyGenerated);
                 if (c.IsUnexplored)
                     c = c with { IsFlagged = true };
             }
@@ -257,7 +257,6 @@ public class Game(int? seed = null, int? minesPerChunk = null)
             obj.WriteProperty("Seed", value.Seed);
             obj.WriteProperty("MinesPerChunk", value.MinesPerChunk);
             using var arr = obj.StartArray("Chunks");
-            arr.WriteArray(value._chunks.Values.OfType<ChunkWithMines>());
             arr.WriteArray(value._chunks.Values.OfType<ChunkGenerated>());
         }
     }
