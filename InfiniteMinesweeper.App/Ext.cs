@@ -31,6 +31,60 @@ public static class Ext
             return reader.Read();
         }
     }
+
+    extension(Utf8JsonWriter writer)
+    {
+        public CloseObjectDisposable StartObject(JsonSerializerOptions options)
+        {
+            writer.WriteStartObject();
+            return new(writer, options);
+        }
+
+        public CloseArrayDisposable StartArray(JsonSerializerOptions options)
+        {
+            writer.WriteStartArray();
+            return new(writer, options);
+        }
+    }
+
+    public readonly ref struct CloseObjectDisposable(Utf8JsonWriter writer, JsonSerializerOptions options) : IDisposable
+    {
+        public void Dispose()
+        => writer.WriteEndObject();
+
+        public void WriteProperty<T>(ReadOnlySpan<char> property, T value)
+        {
+            writer.WritePropertyName(property);
+            JsonSerializer.Serialize(writer, value, options);
+        }
+
+        public void WritePropertyArray<T>(ReadOnlySpan<char> property, IEnumerable<T> value)
+        {
+            writer.WritePropertyName(property);
+            using var a = writer.StartArray(options);
+            foreach (var item in value)
+                JsonSerializer.Serialize(writer, item, options);
+        }
+
+        public CloseArrayDisposable StartArray(ReadOnlySpan<char> property)
+        {
+            writer.WritePropertyName(property);
+            writer.WriteStartArray();
+            return new(writer, options);
+        }
+    }
+
+    public readonly ref struct CloseArrayDisposable(Utf8JsonWriter writer, JsonSerializerOptions options) : IDisposable
+    {
+        public void WriteArray<T>(IEnumerable<T> value)
+        {
+            foreach (var item in value)
+                JsonSerializer.Serialize(writer, item, options);
+        }
+
+        public void Dispose()
+        => writer.WriteEndArray();
+    }
 }
 
 public static class ExtClass

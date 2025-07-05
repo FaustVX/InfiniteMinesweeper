@@ -229,7 +229,7 @@ public class Game(int? seed = null, int? minesPerChunk = null)
                                     ?? throw new JsonException();
                                 chunks[chunk.Pos] = chunk;
                             }
-                            }
+                        }
                         else
                             throw new JsonException();
                         break;
@@ -252,7 +252,13 @@ public class Game(int? seed = null, int? minesPerChunk = null)
 
         public override void Write(Utf8JsonWriter writer, Game value, JsonSerializerOptions options)
         {
-            return;
+            using var obj = writer.StartObject(options);
+            obj.WriteProperty("$Version", 1);
+            obj.WriteProperty("Seed", value.Seed);
+            obj.WriteProperty("MinesPerChunk", value.MinesPerChunk);
+            using var arr = obj.StartArray("Chunks");
+            arr.WriteArray(value._chunks.Values.OfType<ChunkWithMines>());
+            arr.WriteArray(value._chunks.Values.OfType<ChunkGenerated>());
         }
     }
 
@@ -262,6 +268,7 @@ public class Game(int? seed = null, int? minesPerChunk = null)
         {
             JsonConverter,
             ChunkWithMines.JsonConverter,
+            ChunkGenerated.JsonConverter,
             Cell.JsonConverter,
         },
         AllowTrailingCommas = true,

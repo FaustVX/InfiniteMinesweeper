@@ -52,7 +52,16 @@ public readonly record struct Cell(int MinesAround, Pos PosInChunk, Pos ChunkPos
 
         public override void Write(Utf8JsonWriter writer, Cell value, JsonSerializerOptions options)
         {
-            return;
+            if (value.IsFlagged || !value.IsUnexplored)
+            {
+                using var obj = writer.StartObject(options);
+                obj.WriteProperty("X", value.PosInChunk.X);
+                obj.WriteProperty("Y", value.PosInChunk.Y);
+                if (value.IsFlagged)
+                    obj.WriteProperty("IsFlagged", value.IsFlagged);
+                if (!value.IsUnexplored)
+                    obj.WriteProperty("IsUnexplored", value.IsUnexplored);
+            }
         }
     }
 }

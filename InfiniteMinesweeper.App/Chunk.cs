@@ -128,7 +128,10 @@ Loop:
 
         public override void Write(Utf8JsonWriter writer, ChunkWithMines value, JsonSerializerOptions options)
         {
-            return;
+            using var obj = writer.StartObject(options);
+            obj.WriteProperty("X", value.Pos.X);
+            obj.WriteProperty("Y", value.Pos.Y);
+            obj.WritePropertyArray("Cells", value._cells.Cast<Cell>());
         }
     }
 }
@@ -176,6 +179,22 @@ public sealed class ChunkGenerated : Chunk
 
         static int MinesAround(Game game, Pos cellPos)
         => game.CountArround(cellPos, static c => c.IsMine);
+    }
+
+    public static JsonConverter<ChunkGenerated> JsonConverter { get; } = new Converter();
+
+    private sealed class Converter : JsonConverter<ChunkGenerated>
+    {
+        public override ChunkGenerated? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        => throw new NotImplementedException();
+
+        public override void Write(Utf8JsonWriter writer, ChunkGenerated value, JsonSerializerOptions options)
+        {
+            using var obj = writer.StartObject(options);
+            obj.WriteProperty("X", value.Pos.X);
+            obj.WriteProperty("Y", value.Pos.Y);
+            obj.WritePropertyArray("Cells", value._cells.Cast<Cell>());
+        }
     }
 }
 
