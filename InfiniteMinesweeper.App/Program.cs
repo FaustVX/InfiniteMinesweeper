@@ -72,7 +72,7 @@ void Draw()
             for (int x = 0; x < viewport.X; x++)
             {
                 var cellPos = new Pos(x, y) - center + cursor;
-                ref var cell = ref game.GetCell(cellPos, ChunkState.NotGenerated);
+                ref readonly var cell = ref game.GetCell(cellPos, ChunkState.NotGenerated);
                 if (cell.IsUnexplored)
                 {
                     (var back, Console.BackgroundColor) = (Console.BackgroundColor, bgColors[(cellPos.ToChunkPos(out var posInChunk).IsEven, posInChunk.IsEven)]);

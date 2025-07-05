@@ -128,7 +128,7 @@ public class Game(int? seed = null, int? minesPerChunk = null)
             }
         }
 
-        ref var cell = ref GetCell(cellPos, ChunkState.FullyGenerated);
+        ref readonly var cell = ref GetCell(cellPos, ChunkState.FullyGenerated);
         if (cell.IsUnexplored)
             return ExploreUnexplored(cellPos);
         if (cell.MinesAround > 0)
@@ -152,7 +152,7 @@ public class Game(int? seed = null, int? minesPerChunk = null)
 
         int ExploreClue(Pos cellPos)
         {
-            ref var cell = ref GetCell(cellPos, ChunkState.FullyGenerated);
+            ref readonly var cell = ref GetCell(cellPos, ChunkState.FullyGenerated);
             if (cell.IsFlagged)
                 return 0;
             var count = 0;

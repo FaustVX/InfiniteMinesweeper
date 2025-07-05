@@ -83,7 +83,7 @@ public class UnitTest1
         var pos = new Pos(0, 0);
 
         // Act
-        ref var cell = ref game.GetCell(pos, ChunkState.MineGenerated);
+        ref readonly var cell = ref game.GetCell(pos, ChunkState.MineGenerated);
 
         // Assert
         Assert.Equal(0, cell.MinesAround);

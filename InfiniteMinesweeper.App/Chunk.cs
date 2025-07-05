@@ -110,7 +110,7 @@ Loop:
             if (x is int i && y is int j)
             {
                 var chunk = new ChunkWithMines(new(i, j));
-                foreach (ref var c in CollectionsMarshal.AsSpan(cells))
+                foreach (ref readonly var c in CollectionsMarshal.AsSpan(cells))
                 {
                     ref var o = ref chunk[c.PosInChunk];
                     o = c with
