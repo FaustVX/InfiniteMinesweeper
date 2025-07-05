@@ -207,6 +207,7 @@ public class Game(int? seed = null, int? minesPerChunk = null)
             int? seed = null;
             int? mines = null;
             Dictionary<Pos, Chunk> chunks = [];
+            bool waitFor1stMove = true;
 
             while (reader.TryGetProperty(out propertyName))
             {
@@ -220,11 +221,14 @@ public class Game(int? seed = null, int? minesPerChunk = null)
                         break;
                     case "Chunks":
                         if (reader.TokenType == JsonTokenType.StartArray)
+                        {
+                            waitFor1stMove = false;
                             while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
                             {
                                 var chunk = JsonSerializer.TryDeserialize<ChunkWithMines>(ref reader, options)
                                     ?? throw new JsonException();
                                 chunks[chunk.Pos] = chunk;
+                            }
                             }
                         else
                             throw new JsonException();
@@ -234,7 +238,7 @@ public class Game(int? seed = null, int? minesPerChunk = null)
 
             if (seed is int s && mines is int m)
             {
-                var game = new Game(s, chunks, m) { _waitFor1stMove = false };
+                var game = new Game(s, chunks, m) { _waitFor1stMove = waitFor1stMove };
                 foreach (var c in chunks.Values)
                     if (c is ChunkWithMines cwm)
                         cwm.GenerateAfterDeserialization(game);
