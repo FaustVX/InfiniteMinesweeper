@@ -141,6 +141,7 @@ bool Update(ref Game game, ref Pos cursor)
             break;
         case { Key: ConsoleKey.L }:
             game = Game.Load(new("save.json"));
+            cursor = new Pos(Chunk.Size - 1, Chunk.Size - 1) / 2;
             break;
     }
     return true;
