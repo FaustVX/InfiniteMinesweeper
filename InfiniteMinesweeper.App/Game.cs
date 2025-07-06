@@ -199,7 +199,7 @@ public class Game(int? seed = null, int? minesPerChunk = null)
             if (reader.TokenType != JsonTokenType.StartObject)
                 throw new JsonException();
 
-            if (reader.TryGetProperty(options, out var propertyName, out byte? version) && propertyName == "$Version")
+            if (reader.TryGetProperty(options, out var propertyName, out byte? version) && propertyName == "$Version" && version is > 0 and <= 1)
                 DeserializationVersion = version.Value;
             else
                 throw new JsonException();
@@ -232,6 +232,8 @@ public class Game(int? seed = null, int? minesPerChunk = null)
                         break;
                 }
             }
+
+            DeserializationVersion = 0;
 
             if (seed is int s && mines is int m)
             {
