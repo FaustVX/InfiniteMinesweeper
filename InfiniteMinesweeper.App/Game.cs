@@ -4,47 +4,14 @@ using ZLinq;
 
 namespace InfiniteMinesweeper;
 
-file abstract class DictionaryAsArrayJsonConverter<TKey, TValue>(Func<TValue, TKey> keySelector) : JsonConverter<Dictionary<TKey, TValue>>
-    where TKey : notnull
-{
-    public override Dictionary<TKey, TValue>? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-    {
-        var values = JsonSerializer.Deserialize<List<TValue>>(ref reader, options);
-        if (values == null)
-            return null;
-        var dict = new Dictionary<TKey, TValue>();
-        foreach (var value in values)
-        {
-            dict[keySelector(value)] = value;
-        }
-        return dict;
-    }
-
-    public override void Write(Utf8JsonWriter writer, Dictionary<TKey, TValue> value, JsonSerializerOptions options)
-    {
-        JsonSerializer.Serialize(writer, value.Values.ToList(), options);
-    }
-}
-
-file sealed class ChunkDictJsonConverter : DictionaryAsArrayJsonConverter<Pos, Chunk>
-{
-    public ChunkDictJsonConverter() : base(static c => c.Pos) { }
-}
-
 public class Game(int? seed = null, int? minesPerChunk = null)
 {
-    [JsonConstructor]
-    private Game(int seed, Dictionary<Pos, Chunk> chunks)
-    : this(new int?(seed))
-    {
-        _chunks = chunks;
-    }
+    private Game(int seed, Dictionary<Pos, Chunk> chunks, int minesPerChunk)
+    : this(seed, minesPerChunk)
+    => _chunks = chunks;
 
     public int MinesPerChunk { get; } = minesPerChunk is >= 0 and < (Chunk.Size * Chunk.Size) ? minesPerChunk.Value : 10;
-    [JsonInclude]
     public readonly int Seed = seed ?? Random.Shared.Next();
-    [JsonInclude, JsonPropertyName("Chunks")]
-    // [JsonConverter(typeof(ChunkDictJsonConverter))]
     private readonly Dictionary<Pos, Chunk> _chunks = [];
 
     public Chunk GetChunk(Pos pos, ChunkState desiredState)
@@ -133,13 +100,13 @@ public class Game(int? seed = null, int? minesPerChunk = null)
 
     public void ToggleFlag(Pos cellPos)
     {
-        ref var cell = ref GetCell(cellPos, ChunkState.MineGenerated);
+        ref var cell = ref GetCell(cellPos, ChunkState.FullyGenerated);
         if (cell.IsUnexplored)
             cell = cell with { IsFlagged = !cell.IsFlagged };
         else if (cell.MinesAround == CountArround(cellPos, static c => c.IsUnexplored || c.IsMine))
             foreach (var pos in GetNeighbors(cellPos))
             {
-                ref var c = ref GetCell(pos, ChunkState.MineGenerated);
+                ref var c = ref GetCell(pos, ChunkState.FullyGenerated);
                 if (c.IsUnexplored)
                     c = c with { IsFlagged = true };
             }
@@ -161,7 +128,7 @@ public class Game(int? seed = null, int? minesPerChunk = null)
             }
         }
 
-        ref var cell = ref GetCell(cellPos, ChunkState.FullyGenerated);
+        ref readonly var cell = ref GetCell(cellPos, ChunkState.FullyGenerated);
         if (cell.IsUnexplored)
             return ExploreUnexplored(cellPos);
         if (cell.MinesAround > 0)
@@ -185,7 +152,7 @@ public class Game(int? seed = null, int? minesPerChunk = null)
 
         int ExploreClue(Pos cellPos)
         {
-            ref var cell = ref GetCell(cellPos, ChunkState.FullyGenerated);
+            ref readonly var cell = ref GetCell(cellPos, ChunkState.FullyGenerated);
             if (cell.IsFlagged)
                 return 0;
             var count = 0;
@@ -220,6 +187,102 @@ public class Game(int? seed = null, int? minesPerChunk = null)
         .AsValueEnumerable()
         .Count(p => predicate(GetCell(p, ChunkState.MineGenerated)));
     }
+
+    public static JsonConverter<Game> JsonConverter { get; } = new Converter();
+
+    internal static int DeserializationVersion { get; private set; }
+
+    private sealed class Converter : JsonConverter<Game>
+    {
+        public override Game? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        {
+            if (reader.TokenType != JsonTokenType.StartObject)
+                throw new JsonException();
+
+            if (reader.TryGetProperty(options, out var propertyName, out byte? version) && propertyName == "$Version")
+                DeserializationVersion = version.Value;
+            else
+                throw new JsonException();
+
+            int? seed = null;
+            int? mines = null;
+            Dictionary<Pos, Chunk> chunks = [];
+            bool waitFor1stMove = true;
+
+            while (reader.TryGetProperty(out propertyName))
+            {
+                switch (propertyName)
+                {
+                    case "Seed":
+                        seed = JsonSerializer.Deserialize<int>(ref reader, options);
+                        break;
+                    case "MinesPerChunk":
+                        mines = JsonSerializer.Deserialize<int>(ref reader, options);
+                        break;
+                    case "Chunks":
+                        if (reader.TokenType == JsonTokenType.StartArray)
+                        {
+                            waitFor1stMove = false;
+                            while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
+                            {
+                                var chunk = JsonSerializer.TryDeserialize<ChunkWithMines>(ref reader, options)
+                                    ?? throw new JsonException();
+                                chunks[chunk.Pos] = chunk;
+                            }
+                        }
+                        else
+                            throw new JsonException();
+                        break;
+                }
+            }
+
+            if (seed is int s && mines is int m)
+            {
+                var game = new Game(s, chunks, m) { _waitFor1stMove = waitFor1stMove };
+                foreach (var c in chunks.Values)
+                    if (c is ChunkWithMines cwm)
+                        cwm.GenerateAfterDeserialization(game);
+                foreach (var p in chunks.Keys.ToArray())
+                    _ = game.GetChunk(p, ChunkState.FullyGenerated);
+
+                return game;
+            }
+            return default;
+        }
+
+        public override void Write(Utf8JsonWriter writer, Game value, JsonSerializerOptions options)
+        {
+            using var obj = writer.StartObject(options);
+            obj.WriteProperty("$Version", 1);
+            obj.WriteProperty("Seed", value.Seed);
+            obj.WriteProperty("MinesPerChunk", value.MinesPerChunk);
+            using var arr = obj.StartArray("Chunks");
+            arr.WriteArray(value._chunks.Values.OfType<ChunkGenerated>());
+        }
+    }
+
+    private readonly static JsonSerializerOptions SerializerOptions = new()
+    {
+        Converters =
+        {
+            JsonConverter,
+            ChunkWithMines.JsonConverter,
+            ChunkGenerated.JsonConverter,
+            Cell.JsonConverter,
+        },
+        AllowTrailingCommas = true,
+        PropertyNameCaseInsensitive = false,
+        ReferenceHandler = ReferenceHandler.Preserve
+    };
+
+    public void Save(FileInfo file)
+    {
+        var json = JsonSerializer.Serialize(this, SerializerOptions);
+        File.WriteAllText(file.FullName, json);
+    }
+
+    public static Game Load(FileInfo file)
+    => JsonSerializer.Deserialize<Game>(File.ReadAllText(file.FullName), SerializerOptions)!;
 }
 
 [Serializable]

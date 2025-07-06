@@ -1,0 +1,30 @@
+{
+    "$Version": 1,
+    "Seed": 0,
+    "MinesPerChunk": 11,
+    "Chunks": [
+        {
+            "X": 0,
+            "Y": 0,
+            "Cells": [
+                {
+                    "X": 0,
+                    "Y": 0,
+                    "IsUnexplored": true,
+                    "IsFlagged": true
+                }
+            ]
+        },
+        {
+            "X": 1,
+            "Y": 1,
+            "Cells": [
+                {
+                    "X": 0,
+                    "Y": 0,
+                    "IsUnexplored": false
+                }
+            ]
+        }
+    ]
+}

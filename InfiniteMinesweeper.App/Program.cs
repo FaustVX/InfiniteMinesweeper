@@ -1,7 +1,4 @@
 ﻿using System.Collections.Frozen;
-using System.Diagnostics.CodeAnalysis;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using InfiniteMinesweeper;
 using Spectre.Console;
 
@@ -25,10 +22,16 @@ var cluesColors = FrozenDictionary.ToFrozenDictionary<int, ConsoleColor>(
         new(8, ConsoleColor.Magenta)
     ]);
 
-var game = new Game(AnsiConsole.Ask<int?>("Game seed :", null));
+var game = args switch
+{
+    [var arg] when new FileInfo(arg) is { Exists: true } path => Game.Load(path),
+    [var arg] when int.TryParse(arg, out var seed) => new Game(seed),
+    _ => new Game(AnsiConsole.Ask<int?>("Game seed :", null)),
+};
+
 Console.CursorVisible = false;
 var cts = new CancellationTokenSource();
-var timer = Task.Run(async () =>
+using var timer = Task.Run(async () =>
 {
     var start = DateTime.Now;
     var timer = new PeriodicTimer(TimeSpan.FromSeconds(.5));
@@ -53,7 +56,7 @@ while (true)
 {
     Draw();
 
-    if (!Update(game, ref cursor))
+    if (!Update(ref game, ref cursor))
         break;
 }
 Exit();
@@ -75,7 +78,7 @@ void Draw()
             for (int x = 0; x < viewport.X; x++)
             {
                 var cellPos = new Pos(x, y) - center + cursor;
-                ref var cell = ref game.GetCell(cellPos, ChunkState.NotGenerated);
+                ref readonly var cell = ref game.GetCell(cellPos, ChunkState.NotGenerated);
                 if (cell.IsUnexplored)
                 {
                     (var back, Console.BackgroundColor) = (Console.BackgroundColor, bgColors[(cellPos.ToChunkPos(out var posInChunk).IsEven, posInChunk.IsEven)]);
@@ -109,7 +112,7 @@ void Draw()
     }
 }
 
-bool Update(Game game, ref Pos cursor)
+bool Update(ref Game game, ref Pos cursor)
 {
     switch (Console.ReadKey(intercept: true))
     {
@@ -140,9 +143,11 @@ bool Update(Game game, ref Pos cursor)
             game.ToggleFlag(cursor);
             break;
         case { Key: ConsoleKey.S }:
-            var json = JsonSerializer.Serialize(game, new JsonSerializerOptions(){ Converters = { new PosJsonConverter(), new Array2DJsonConverter<Cell>() } });
-            File.WriteAllText("save.json", json);
-            var g = JsonSerializer.Deserialize<Game>(json, new JsonSerializerOptions() { Converters = { new PosJsonConverter(), new Array2DJsonConverter<Cell>() }, IncludeFields = true, PropertyNameCaseInsensitive = false })!;
+            game.Save(new("save.json"));
+            break;
+        case { Key: ConsoleKey.L }:
+            game = Game.Load(new("save.json"));
+            cursor = new Pos(Chunk.Size - 1, Chunk.Size - 1) / 2;
             break;
     }
     return true;
@@ -274,94 +279,5 @@ file static class Ext
         };
 
         public int BGColor => color.FGColor + 10;
-    }
-}
-
-file sealed class PosJsonConverter : JsonConverter<Pos>
-{
-    public override Pos ReadAsPropertyName(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-    {
-        return base.ReadAsPropertyName(ref reader, typeToConvert, options);
-    }
-    public override void WriteAsPropertyName(Utf8JsonWriter writer, [DisallowNull] Pos value, JsonSerializerOptions options)
-    {
-        writer.WritePropertyName(value.ToString());
-    }
-    public override Pos Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-    {
-        throw new NotImplementedException();
-    }
-
-    public override void Write(Utf8JsonWriter writer, Pos value, JsonSerializerOptions options)
-    {
-        writer.WriteStartObject();
-        writer.WriteNumber("X", value.X);
-        writer.WriteNumber("Y", value.Y);
-        writer.WriteEndObject();
-    }
-}
-
-file sealed class Array2DJsonConverter<T> : JsonConverter<T[,]>
-{
-    public override T[,]? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-    {
-        if (reader.TokenType != JsonTokenType.StartArray)
-            throw new JsonException();
-
-        var items = new List<List<T>>();
-        int? width = null;
-
-        while (reader.Read())
-        {
-            if (reader.TokenType == JsonTokenType.EndArray)
-                break;
-
-            if (reader.TokenType != JsonTokenType.StartArray)
-                throw new JsonException();
-
-            var row = new List<T>();
-            while (reader.Read())
-            {
-                if (reader.TokenType == JsonTokenType.EndArray)
-                    break;
-
-                row.Add(JsonSerializer.Deserialize<T>(ref reader, options)!);
-            }
-
-            width ??= row.Count;
-            if (row.Count != width)
-                throw new JsonException("Jagged arrays are not supported.");
-
-            items.Add(row);
-        }
-
-        var height = items.Count;
-        if (width is null)
-            return new T[0, 0];
-
-        var array = new T[height, width.Value];
-        for (int i = 0; i < height; i++)
-            for (int j = 0; j < width; j++)
-                array[i, j] = items[i][j];
-
-        return array;
-    }
-
-    public override void Write(Utf8JsonWriter writer, T[,] value, JsonSerializerOptions options)
-    {
-        int height = value.GetLength(0);
-        int width = value.GetLength(1);
-
-        writer.WriteStartArray();
-        for (int i = 0; i < height; i++)
-        {
-            writer.WriteStartArray();
-            for (int j = 0; j < width; j++)
-            {
-                JsonSerializer.Serialize(writer, value[i, j], options);
-            }
-            writer.WriteEndArray();
-        }
-        writer.WriteEndArray();
     }
 }
