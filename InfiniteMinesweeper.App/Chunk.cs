@@ -68,6 +68,14 @@ Loop:
                 goto Loop;
             cell = cell with { IsMine = true };
         }
+        for (var x = 0; x < Size; x++)
+            for (var y = 0; y < Size; y++)
+            {
+                ref var cell = ref cells[x, y];
+                if (!cell.IsUnexplored)
+                    cell = cell with { IsMine = false };
+            }
+
         return cells;
     }
 
@@ -116,8 +124,6 @@ Loop:
                     o = c with
                     {
                         ChunkPos = chunk.Pos,
-                        IsMine = o.IsMine,
-                        MinesAround = o.MinesAround,
                     };
                 }
                 return chunk;
