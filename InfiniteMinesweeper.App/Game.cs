@@ -220,18 +220,15 @@ public class Game(int? seed = null, int? minesPerChunk = null)
                         mines = JsonSerializer.Deserialize<int>(ref reader, options);
                         break;
                     case "Chunks":
-                        if (reader.TokenType == JsonTokenType.StartArray)
+                        if (reader.TokenType != JsonTokenType.StartArray)
+                            throw new JsonException();
+                        while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
                         {
                             waitFor1stMove = false;
-                            while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
-                            {
-                                var chunk = JsonSerializer.TryDeserialize<ChunkWithMines>(ref reader, options)
-                                    ?? throw new JsonException();
-                                chunks[chunk.Pos] = chunk;
-                            }
+                            var chunk = JsonSerializer.TryDeserialize<ChunkWithMines>(ref reader, options)
+                                ?? throw new JsonException();
+                            chunks[chunk.Pos] = chunk;
                         }
-                        else
-                            throw new JsonException();
                         break;
                 }
             }

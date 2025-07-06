@@ -103,14 +103,13 @@ Loop:
                         y = JsonSerializer.Deserialize<int>(ref reader, options);
                         break;
                     case "Cells":
-                        if (reader.TokenType == JsonTokenType.StartArray)
-                            while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
-                            {
-                                var cell = JsonSerializer.Deserialize<Cell>(ref reader, options);
-                                cells.Add(cell);
-                            }
-                        else
+                        if (reader.TokenType != JsonTokenType.StartArray)
                             throw new JsonException();
+                        while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
+                        {
+                            var cell = JsonSerializer.Deserialize<Cell>(ref reader, options);
+                            cells.Add(cell);
+                        }
                         break;
                 }
             }
