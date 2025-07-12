@@ -137,12 +137,18 @@ public class Game(int? seed = null, int? minesPerChunk = null)
 
         int ExploreUnexplored(Pos cellPos)
         {
+            var chunk = GetChunk(cellPos.ToChunkPos(out _), ChunkState.NotGenerated);
+            if (chunk.HasExploded)
+                return 0;
             ref var cell = ref GetCell(cellPos, ChunkState.FullyGenerated);
             if (cell.IsFlagged || !cell.IsUnexplored)
                 return 0;
             cell = cell with { IsUnexplored = false };
             if (cell.IsMine)
+            {
+                chunk.HasExploded = true;
                 throw new ExplodeException();
+            }
             var count = 1;
             if (cell.RemainingMines(this) == 0 && !cell.IsMine)
                 foreach (var neighbor in GetNeighbors(cellPos))

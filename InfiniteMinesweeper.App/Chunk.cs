@@ -14,6 +14,7 @@ public class Chunk(Pos pos, Game game)
     public Pos Pos { get; } = pos;
     public virtual int RemainingMines => _game.MinesPerChunk;
     public virtual ChunkState State => ChunkState.NotGenerated;
+    public bool HasExploded { get; set; }
     public virtual ref Cell this[Pos pos]
     {
         get
