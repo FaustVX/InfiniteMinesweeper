@@ -100,6 +100,8 @@ public class Game(int? seed = null, int? minesPerChunk = null)
 
     public void ToggleFlag(Pos cellPos)
     {
+        if (CountArround(cellPos, c => !c.IsUnexplored) <= 0)
+            return;
         ref var cell = ref GetCell(cellPos, ChunkState.FullyGenerated);
         if (cell.IsUnexplored)
             cell = cell with { IsFlagged = !cell.IsFlagged };
@@ -126,7 +128,11 @@ public class Game(int? seed = null, int? minesPerChunk = null)
                 c = ref GetCell(pos, ChunkState.MineGenerated);
                 c = c with { IsMine = false };
             }
+            return ExploreUnexplored(cellPos);
         }
+
+        if (CountArround(cellPos, c => !c.IsUnexplored) <= 0)
+            return 0;
 
         ref readonly var cell = ref GetCell(cellPos, ChunkState.FullyGenerated);
         if (cell.IsUnexplored)
