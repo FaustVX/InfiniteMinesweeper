@@ -274,14 +274,11 @@ public class Game(int? seed = null, int? minesPerChunk = null)
         ReferenceHandler = ReferenceHandler.Preserve
     };
 
-    public void Save(FileInfo file)
-    {
-        var json = JsonSerializer.Serialize(this, SerializerOptions);
-        File.WriteAllText(file.FullName, json);
-    }
+    public void Save(Stream stream)
+    => JsonSerializer.Serialize(stream, this, SerializerOptions);
 
-    public static Game Load(FileInfo file)
-    => JsonSerializer.Deserialize<Game>(File.ReadAllText(file.FullName), SerializerOptions)!;
+    public static Game Load(Stream stream)
+    => JsonSerializer.Deserialize<Game>(stream, SerializerOptions)!;
 }
 
 [Serializable]

@@ -24,7 +24,7 @@ var cluesColors = FrozenDictionary.ToFrozenDictionary<int, ConsoleColor>(
 
 var game = args switch
 {
-    [var arg] when new FileInfo(arg) is { Exists: true } path => Game.Load(path),
+    [var arg] when new FileInfo(arg) is { Exists: true } path => Game.Load(File.OpenRead(path.FullName)),
     [var arg] when int.TryParse(arg, out var seed) => new Game(seed),
     _ => new Game(AnsiConsole.Ask<int?>("Game seed :", null)),
 };
@@ -143,10 +143,12 @@ bool Update(ref Game game, ref Pos cursor)
             game.ToggleFlag(cursor);
             break;
         case { Key: ConsoleKey.S }:
-            game.Save(new("save.json"));
+            using (var stream = File.Create("save.json"))
+                game.Save(stream);
             break;
         case { Key: ConsoleKey.L }:
-            game = Game.Load(new("save.json"));
+            using (var stream = File.OpenRead("save.json"))
+                game = Game.Load(stream);
             cursor = new Pos(Chunk.Size - 1, Chunk.Size - 1) / 2;
             break;
     }
