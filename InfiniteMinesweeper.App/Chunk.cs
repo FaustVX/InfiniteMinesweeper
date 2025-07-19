@@ -24,6 +24,11 @@ public class Chunk(Pos pos, Game game)
             return ref _defaultCell;
         }
     }
+    public virtual void ClearChunk()
+    { }
+
+    public virtual int CountCell(Func<Cell, bool> predicate)
+    => predicate(_defaultCell) ? Size * Size : 0;
 }
 
 public sealed class ChunkWithMines : Chunk
@@ -53,6 +58,30 @@ public sealed class ChunkWithMines : Chunk
     public override ref Cell this[Pos pos]
     => ref _cells[pos.X, pos.Y];
 
+    public sealed override void ClearChunk()
+    {
+        for (var x = 0; x < Size; x++)
+            for (var y = 0; y < Size; y++)
+            {
+                ref var cell = ref _cells[x, y];
+                if (cell is { IsFlagged: false, IsUnexplored: true })
+                    cell = cell with { IsUnexplored = true };
+            }
+    }
+
+    public sealed override int CountCell(Func<Cell, bool> predicate)
+    {
+        var count = 0;
+        for (var x = 0; x < Size; x++)
+            for (var y = 0; y < Size; y++)
+            {
+                ref readonly var cell = ref _cells[x, y];
+                if (predicate(cell))
+                    count++;
+            }
+        return count;
+    }
+
     private Cell[,] GenerateCells(Pos pos)
     {
         var cells = _cells ?? new Cell[Size, Size];
@@ -62,7 +91,7 @@ public sealed class ChunkWithMines : Chunk
         var rng = new Random(_game.Seed + pos.GetHashCode());
         for (int i = 0; i < _game.MinesPerChunk; i++)
         {
-Loop:
+        Loop:
             var mine = rng.NextPos();
             ref var cell = ref cells[mine.X, mine.Y];
             if (cell.IsMine)
@@ -154,6 +183,30 @@ public sealed class ChunkGenerated : Chunk
 
     public override ref Cell this[Pos pos]
     => ref _cells[pos.X, pos.Y];
+
+    public sealed override void ClearChunk()
+    {
+        for (var x = 0; x < Size; x++)
+            for (var y = 0; y < Size; y++)
+            {
+                ref var cell = ref _cells[x, y];
+                if (cell is { IsFlagged: false, IsUnexplored: true })
+                    cell = cell with { IsUnexplored = false };
+            }
+    }
+
+    public sealed override int CountCell(Func<Cell, bool> predicate)
+    {
+        var count = 0;
+        for (var x = 0; x < Size; x++)
+            for (var y = 0; y < Size; y++)
+            {
+                ref readonly var cell = ref _cells[x, y];
+                if (predicate(cell))
+                    count++;
+            }
+        return count;
+    }
 
     static Cell[,] GenerateCells(Game game, Pos pos)
     {

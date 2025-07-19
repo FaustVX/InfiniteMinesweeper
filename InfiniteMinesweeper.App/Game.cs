@@ -116,6 +116,30 @@ public class Game(int? seed = null, int? minesPerChunk = null)
             }
     }
 
+    public void TryClearChunk(Pos chunkPos)
+    {
+        var chunk = GetChunk(chunkPos, ChunkState.NotGenerated);
+        if (chunk.State == ChunkState.NotGenerated)
+            return;
+        if (chunk.RemainingMines == 0)
+        {
+            chunk.ClearChunk();
+            for (var x = 0; x < Chunk.Size; x++)
+                for (var y = 0; y < Chunk.Size; y++)
+                    Explore(new Pos(x, y).ToCellPos(chunkPos));
+        }
+        else if (chunk.RemainingMines == chunk.CountCell(static c => c is { IsFlagged: false, IsUnexplored: true }))
+        {
+            for (var x = 0; x < Chunk.Size; x++)
+                for (var y = 0; y < Chunk.Size; y++)
+                {
+                    ref var cell = ref GetCell(new Pos(x, y).ToCellPos(chunkPos), ChunkState.MineGenerated);
+                    if (cell.IsUnexplored)
+                        cell = cell with { IsFlagged = true };
+                }
+            }
+    }
+
     private bool _waitFor1stMove = true;
 
     public int Explore(Pos cellPos)
