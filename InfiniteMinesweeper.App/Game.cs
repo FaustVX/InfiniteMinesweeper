@@ -138,6 +138,16 @@ public class Game(int? seed = null, int? minesPerChunk = null)
                         cell = cell with { IsFlagged = true };
                 }
             }
+        else
+        {
+            for (var x = 0; x < Chunk.Size; x++)
+                for (var y = 0; y < Chunk.Size; y++)
+                {
+                    ref var cell = ref GetCell(new Pos(x, y).ToCellPos(chunkPos), ChunkState.MineGenerated);
+                    if (cell is { IsUnexplored: false, IsFlagged: false } && cell.RemainingMines(this) == 0)
+                    Explore(new Pos(x, y).ToCellPos(chunkPos));
+                }
+        }
     }
 
     private bool _waitFor1stMove = true;
