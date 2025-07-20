@@ -119,7 +119,7 @@ public class Game(int? seed = null, int? minesPerChunk = null)
     public void TryClearChunk(Pos chunkPos)
     {
         var chunk = GetChunk(chunkPos, ChunkState.NotGenerated);
-        if (chunk.State == ChunkState.NotGenerated)
+        if (chunk.State == ChunkState.NotGenerated || chunk.HasExploded)
             return;
         if (chunk.RemainingMines == 0)
         {
