@@ -60,25 +60,17 @@ public sealed class ChunkWithMines : Chunk
 
     public sealed override void ClearChunk()
     {
-        for (var x = 0; x < Size; x++)
-            for (var y = 0; y < Size; y++)
-            {
-                ref var cell = ref _cells[x, y];
-                if (cell is { IsFlagged: false, IsUnexplored: true })
-                    cell = cell with { IsUnexplored = true };
-            }
+        foreach (ref var cell in MemoryMarshal.CreateSpan(ref _cells[0, 0], Size * Size))
+            if (cell is { IsFlagged: false, IsUnexplored: true })
+                cell = cell with { IsUnexplored = true };
     }
 
     public sealed override int CountCell(Func<Cell, bool> predicate)
     {
         var count = 0;
-        for (var x = 0; x < Size; x++)
-            for (var y = 0; y < Size; y++)
-            {
-                ref readonly var cell = ref _cells[x, y];
-                if (predicate(cell))
-                    count++;
-            }
+        foreach (ref readonly var cell in MemoryMarshal.CreateSpan(ref _cells[0, 0], Size * Size))
+            if (predicate(cell))
+                count++;
         return count;
     }
 
@@ -98,14 +90,9 @@ public sealed class ChunkWithMines : Chunk
                 goto Loop;
             cell = cell with { IsMine = true };
         }
-        for (var x = 0; x < Size; x++)
-            for (var y = 0; y < Size; y++)
-            {
-                ref var cell = ref cells[x, y];
-                if (!cell.IsUnexplored)
-                    cell = cell with { IsMine = false };
-            }
-
+        foreach (ref var cell in MemoryMarshal.CreateSpan(ref cells[0, 0], Size * Size))
+            if (!cell.IsUnexplored)
+                cell = cell with { IsMine = false };
         return cells;
     }
 
@@ -205,13 +192,10 @@ public sealed class ChunkWithMines : Chunk
                 HasExploded = hasExploded
             };
             foreach (ref readonly var c in CollectionsMarshal.AsSpan(cells))
-            {
-                ref var o = ref chunk[c.PosInChunk];
-                o = c with
+                chunk[c.PosInChunk] = c with
                 {
                     ChunkPos = chunk.Pos,
                 };
-            }
             return chunk;
         }
 
@@ -240,25 +224,17 @@ public sealed class ChunkGenerated : Chunk
 
     public sealed override void ClearChunk()
     {
-        for (var x = 0; x < Size; x++)
-            for (var y = 0; y < Size; y++)
-            {
-                ref var cell = ref _cells[x, y];
-                if (cell is { IsFlagged: false, IsUnexplored: true })
-                    cell = cell with { IsUnexplored = false };
-            }
+        foreach (ref var cell in MemoryMarshal.CreateSpan(ref _cells[0, 0], Size * Size))
+            if (cell is { IsFlagged: false, IsUnexplored: true })
+                cell = cell with { IsUnexplored = false };
     }
 
     public sealed override int CountCell(Func<Cell, bool> predicate)
     {
         var count = 0;
-        for (var x = 0; x < Size; x++)
-            for (var y = 0; y < Size; y++)
-            {
-                ref readonly var cell = ref _cells[x, y];
-                if (predicate(cell))
-                    count++;
-            }
+        foreach (ref readonly var cell in MemoryMarshal.CreateSpan(ref _cells[0, 0], Size * Size))
+            if (predicate(cell))
+                count++;
         return count;
     }
 
