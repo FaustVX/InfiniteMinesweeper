@@ -193,6 +193,7 @@ public class Game(int? seed = null, int? minesPerChunk = null)
             if (cell.IsMine)
             {
                 chunk.HasExploded = true;
+                chunk.TryClearMines();
                 throw new ExplodeException();
             }
             var count = 1;

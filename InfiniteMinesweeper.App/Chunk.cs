@@ -33,6 +33,9 @@ public class Chunk(Pos pos, Game game)
 
     public virtual void CheckCompletedChunk()
     { }
+
+    public virtual void TryClearMines()
+    { }
 }
 
 public sealed class ChunkWithMines : Chunk
@@ -249,6 +252,31 @@ public sealed class ChunkGenerated : Chunk
         foreach (ref var cell in MemoryMarshal.CreateSpan(ref _cells[0, 0], Size * Size))
             if (cell.IsUnexplored)
                 cell = cell with { IsFlagged = true };
+        foreach (var pos in Game.GetNeighbors(Pos))
+            _game.GetChunk(pos, ChunkState.NotGenerated).TryClearMines();
+    }
+
+    public override void TryClearMines()
+    {
+        if (!HasExploded || IsCompleted)
+            return;
+        var completedCount = 0;
+        foreach (var pos in Game.GetNeighbors(Pos))
+            switch (_game.GetChunk(pos, ChunkState.NotGenerated))
+            {
+                case { HasExploded: false, IsCompleted: false }:
+                    return;
+                case { IsCompleted: true }:
+                    completedCount++;
+                    break;
+            }
+        if (completedCount <= 1)
+            return;
+        HasExploded = false;
+        foreach (ref var cell in MemoryMarshal.CreateSpan(ref _cells[0, 0], Size * Size))
+            if (cell is { IsMine: true, IsUnexplored: false })
+                cell = cell with { IsMine = false };
+        CheckCompletedChunk();
     }
 
     public sealed override int CountCell(Func<Cell, bool> predicate)
