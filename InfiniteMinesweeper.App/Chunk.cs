@@ -14,6 +14,7 @@ public class Chunk(Pos pos, Game game)
     public Pos Pos { get; } = pos;
     public virtual int RemainingMines => _game.MinesPerChunk;
     public virtual ChunkState State => ChunkState.NotGenerated;
+    public bool IsCompleted { get; set; } = false;
     public bool HasExploded { get; set; }
     public virtual ref Cell this[Pos pos]
     {
@@ -29,6 +30,9 @@ public class Chunk(Pos pos, Game game)
 
     public virtual int CountCell(Func<Cell, bool> predicate)
     => predicate(_defaultCell) ? Size * Size : 0;
+
+    public virtual void CheckCompletedChunk()
+    { }
 }
 
 public sealed class ChunkWithMines : Chunk
@@ -233,6 +237,18 @@ public sealed class ChunkGenerated : Chunk
         foreach (ref var cell in MemoryMarshal.CreateSpan(ref _cells[0, 0], Size * Size))
             if (cell is { IsFlagged: false, IsUnexplored: true })
                 cell = cell with { IsUnexplored = false };
+    }
+
+    public override void CheckCompletedChunk()
+    {
+        var remainingMines = RemainingMines;
+        foreach (ref readonly var cell in MemoryMarshal.CreateSpan(ref _cells[0, 0], Size * Size))
+            if (cell is { IsUnexplored: true, IsFlagged: false } && --remainingMines < 0)
+                return;
+        IsCompleted = true;
+        foreach (ref var cell in MemoryMarshal.CreateSpan(ref _cells[0, 0], Size * Size))
+            if (cell.IsUnexplored)
+                cell = cell with { IsFlagged = true };
     }
 
     public sealed override int CountCell(Func<Cell, bool> predicate)

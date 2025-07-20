@@ -100,19 +100,23 @@ public class Game(int? seed = null, int? minesPerChunk = null)
 
     public void ToggleFlag(Pos cellPos)
     {
-        if (GetChunk(cellPos.ToChunkPos(out _), ChunkState.NotGenerated).HasExploded || CountArround(cellPos, c => !c.IsUnexplored) <= 0)
+        if (GetChunk(cellPos.ToChunkPos(out _), ChunkState.NotGenerated) is not { HasExploded: false, IsCompleted: false } || CountArround(cellPos, c => !c.IsUnexplored) <= 0)
             return;
         ref var cell = ref GetCell(cellPos, ChunkState.FullyGenerated);
         if (cell.IsUnexplored)
+        {
             cell = cell with { IsFlagged = !cell.IsFlagged };
+            GetChunk(cellPos.ToChunkPos(out _), ChunkState.NotGenerated).CheckCompletedChunk();
+        }
         else if (cell.MinesAround == CountArround(cellPos, static c => c.IsUnexplored || c.IsMine))
             foreach (var pos in GetNeighbors(cellPos))
             {
-                if (GetChunk(pos.ToChunkPos(out _), ChunkState.NotGenerated).HasExploded)
+                if (GetChunk(pos.ToChunkPos(out _), ChunkState.NotGenerated) is not { HasExploded: false } chunk)
                     continue;
                 ref var c = ref GetCell(pos, ChunkState.FullyGenerated);
                 if (c.IsUnexplored)
                     c = c with { IsFlagged = true };
+                chunk.CheckCompletedChunk();
             }
     }
 
@@ -179,8 +183,8 @@ public class Game(int? seed = null, int? minesPerChunk = null)
 
         int ExploreUnexplored(Pos cellPos)
         {
-            var chunk = GetChunk(cellPos.ToChunkPos(out _), ChunkState.NotGenerated);
-            if (chunk.HasExploded)
+            var chunk = GetChunk(cellPos.ToChunkPos(out _), ChunkState.FullyGenerated);
+            if (chunk.HasExploded || chunk.IsCompleted)
                 return 0;
             ref var cell = ref GetCell(cellPos, ChunkState.FullyGenerated);
             if (cell.IsFlagged || !cell.IsUnexplored)
@@ -195,6 +199,7 @@ public class Game(int? seed = null, int? minesPerChunk = null)
             if (cell.RemainingMines(this) == 0 && !cell.IsMine)
                 foreach (var neighbor in GetNeighbors(cellPos))
                     count += ExploreUnexplored(neighbor);
+            chunk.CheckCompletedChunk();
             return count;
         }
 
@@ -302,7 +307,7 @@ public class Game(int? seed = null, int? minesPerChunk = null)
                 if (c is ChunkWithMines cwm)
                     cwm.GenerateAfterDeserialization(game);
             foreach (var p in chunks.Keys.ToArray())
-                _ = game.GetChunk(p, ChunkState.FullyGenerated);
+                game.GetChunk(p, ChunkState.FullyGenerated).CheckCompletedChunk();
 
             return game;
         }
@@ -349,7 +354,7 @@ public class Game(int? seed = null, int? minesPerChunk = null)
 #pragma warning restore IDE0220 // Add explicit cast
                 c.GenerateAfterDeserialization(game);
             foreach (var p in chunks.Keys.ToArray())
-                _ = game.GetChunk(p, ChunkState.FullyGenerated);
+                game.GetChunk(p, ChunkState.FullyGenerated).CheckCompletedChunk();
 
             return game;
         }
