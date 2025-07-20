@@ -58,7 +58,7 @@ public class UnitTest1
     [Fact]
     public void Game_GetChunk()
     {
-        for (int i = 0; i < 10; i++)
+        for (var i = 0; i < 10; i++)
         {
             // Arrange
             var game = new Game();
