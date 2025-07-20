@@ -77,21 +77,27 @@ public sealed class ChunkWithMines : Chunk
     private Cell[,] GenerateCells(Pos pos)
     {
         var cells = _cells ?? new Cell[Size, Size];
+        var set = new HashSet<Pos>();
         for (var i = 0; i < Size; i++)
             for (var j = 0; j < Size; j++)
-                cells[i, j] = new Cell(0, new(i, j), pos, IsMine: false, !cells[i, j].IsDefault && cells[i, j].IsFlagged, cells[i, j].IsDefault || cells[i, j].IsUnexplored);
+            {
+                if (cells[i, j].IsMine)
+                    set.Add(new(i, j));
+                cells[i, j] = new Cell(0, new(i, j), pos, !cells[i, j].IsDefault && cells[i, j].IsMine, !cells[i, j].IsDefault && cells[i, j].IsFlagged, cells[i, j].IsDefault || cells[i, j].IsUnexplored);
+            }
         var rng = new Random(_game.Seed + pos.GetHashCode());
         for (var i = 0; i < _game.MinesPerChunk; i++)
         {
         Loop:
             var mine = rng.NextPos();
             ref var cell = ref cells[mine.X, mine.Y];
-            if (cell.IsMine)
+            if (cell.IsMine && !set.Contains(mine))
                 goto Loop;
             cell = cell with { IsMine = true };
         }
+
         foreach (ref var cell in MemoryMarshal.CreateSpan(ref cells[0, 0], Size * Size))
-            if (!cell.IsUnexplored)
+            if (!cell.IsUnexplored && !set.Remove(cell.PosInChunk))
                 cell = cell with { IsMine = false };
         return cells;
     }
