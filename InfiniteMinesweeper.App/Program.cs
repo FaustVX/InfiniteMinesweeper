@@ -73,9 +73,9 @@ void Draw()
         Console.SetCursorPosition(0, offsets.up);
         Console.CursorVisible = false;
 
-        for (int y = offsets.up; y < viewport.Y; y++)
+        for (var y = offsets.up; y < viewport.Y; y++)
         {
-            for (int x = 0; x < viewport.X; x++)
+            for (var x = 0; x < viewport.X; x++)
             {
                 var cellPos = new Pos(x, y) - center + cursor;
                 ref readonly var cell = ref game.GetCell(cellPos, ChunkState.NotGenerated);

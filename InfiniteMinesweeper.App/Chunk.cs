@@ -77,8 +77,8 @@ public sealed class ChunkWithMines : Chunk
     private Cell[,] GenerateCells(Pos pos)
     {
         var cells = _cells ?? new Cell[Size, Size];
-        for (int i = 0; i < Size; i++)
-            for (int j = 0; j < Size; j++)
+        for (var i = 0; i < Size; i++)
+            for (var j = 0; j < Size; j++)
                 cells[i, j] = new Cell(0, new(i, j), pos, IsMine: false, !cells[i, j].IsDefault && cells[i, j].IsFlagged, cells[i, j].IsDefault || cells[i, j].IsUnexplored);
         var rng = new Random(_game.Seed + pos.GetHashCode());
         for (var i = 0; i < _game.MinesPerChunk; i++)
@@ -251,8 +251,8 @@ public sealed class ChunkGenerated : Chunk
             game.GetChunk(p, ChunkState.MineGenerated);
 
         var cells = new Cell[Size, Size];
-        for (int i = 0; i < Size; i++)
-            for (int j = 0; j < Size; j++)
+        for (var i = 0; i < Size; i++)
+            for (var j = 0; j < Size; j++)
             {
                 Pos cellPos = new(i, j);
                 ref var cell = ref game.GetCell(cellPos.ToCellPos(pos), ChunkState.MineGenerated);
