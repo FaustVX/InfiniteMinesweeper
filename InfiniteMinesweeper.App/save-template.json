@@ -1,5 +1,5 @@
 {
-    "$Version": 1,
+    "$Version": 2,
     "Seed": 0,
     "MinesPerChunk": 11,
     "Chunks": [
@@ -10,8 +10,7 @@
                 {
                     "X": 0,
                     "Y": 0,
-                    "IsUnexplored": true,
-                    "IsFlagged": true
+                    "State": "flag"
                 }
             ]
         },
@@ -22,7 +21,12 @@
                 {
                     "X": 0,
                     "Y": 0,
-                    "IsUnexplored": false
+                    "State": "explored"
+                },
+                {
+                    "X": 0,
+                    "Y": 0,
+                    "State": "mine"
                 }
             ]
         }

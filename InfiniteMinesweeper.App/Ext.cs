@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 
@@ -7,6 +8,7 @@ public static class Ext
 {
     extension(ref Utf8JsonReader reader)
     {
+        [DebuggerStepThrough]
         public bool TryGetProperty([NotNullWhen(true)] out string? propertyName)
         {
             if (!reader.Read())
@@ -34,12 +36,14 @@ public static class Ext
 
     extension(Utf8JsonWriter writer)
     {
+        [DebuggerStepThrough]
         public CloseObjectDisposable StartObject(JsonSerializerOptions options)
         {
             writer.WriteStartObject();
             return new(writer, options);
         }
 
+        [DebuggerStepThrough]
         public CloseArrayDisposable StartArray(JsonSerializerOptions options)
         {
             writer.WriteStartArray();
@@ -91,7 +95,8 @@ public static class ExtClass
 {
     extension(ref Utf8JsonReader reader)
     {
-        public bool TryGetProperty<T>(JsonSerializerOptions options, [NotNullWhen(true)]out string? propertyName, [NotNullWhen(true)]out T? value)
+        [DebuggerStepThrough]
+        public bool TryGetProperty<T>(JsonSerializerOptions options, [NotNullWhen(true)] out string? propertyName, [NotNullWhen(true)] out T? value)
         where T : class
         {
             if (!reader.TryGetProperty(out propertyName))
@@ -106,16 +111,19 @@ public static class ExtClass
 
     extension(JsonSerializer)
     {
+        [DebuggerStepThrough]
         /// <inheritdoc cref="JsonSerializer.Deserialize{TValue}(ref Utf8JsonReader, JsonSerializerOptions?)"/>
         public static TValue? TryDeserialize<TValue>(ref Utf8JsonReader reader, JsonSerializerOptions options)
         where TValue : class
         {
+            var copy = reader;
             try
             {
                 return JsonSerializer.Deserialize<TValue>(ref reader, options);
             }
             catch (JsonException)
             {
+                reader = copy;
                 return default;
             }
         }
@@ -126,7 +134,8 @@ public static class ExtStruct
 {
     extension(ref Utf8JsonReader reader)
     {
-        public bool TryGetProperty<T>(JsonSerializerOptions options, [NotNullWhen(true)]out string? propertyName, [NotNullWhen(true)]out T? value)
+        [DebuggerStepThrough]
+        public bool TryGetProperty<T>(JsonSerializerOptions options, [NotNullWhen(true)] out string? propertyName, [NotNullWhen(true)] out T? value)
         where T : struct
         {
             if (!reader.TryGetProperty(out propertyName))
